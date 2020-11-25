@@ -89,7 +89,7 @@ link_directories(${RSMI_LIB_DIR} "${GRPC_ROOT}/lib" "${GRPC_ROOT}/lib64")
 ## Set RUNPATH if ROCM_RPATH is defined and passed by the environment
 ## RUNPATH should help to run "rdcd" without the usage of ldconfig
 if (DEFINED ENV{ROCM_RPATH})
-    set (CMAKE_EXE_LINKER_FLAGS="-Wl,--enable-new-dtags -Wl,--rpath,$ROCM_RPATH")
+    set (CMAKE_EXE_LINKER_FLAGS "-Wl,--enable-new-dtags")
     set (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
     set (CMAKE_SKIP_BUILD_RPATH TRUE)
 endif ()

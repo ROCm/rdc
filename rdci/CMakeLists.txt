@@ -90,11 +90,9 @@ link_directories(${LIB_BOOSTRAP_DIR})
 add_executable(${RDCI_EXE} "${RDCI_SRC_LIST}")
 
 ## RUNPATH should help to run "rdci" without the usage of ldconfig
-set (CMAKE_EXE_LINKER_FLAGS="-Wl,--enable-new-dtags -Wl,--rpath,$ORIGIN:$ORIGIN/../lib:$ORIGIN/../lib64")
-set (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-if ("${CMAKE_BUILD_TYPE}" STREQUAL Release)
-    set (CMAKE_SKIP_BUILD_RPATH TRUE)
-endif ()
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,--enable-new-dtags -Wl,--rpath,\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib64")
+set(CMAKE_SKIP_RPATH TRUE)
+
 target_link_libraries(${RDCI_EXE} pthread dl rdc_bootstrap)
 
 
