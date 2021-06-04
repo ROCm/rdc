@@ -50,6 +50,7 @@ class RdcSmiLib : public RdcTelemetry {
 
  private:
     RdcMetricFetcherPtr metric_fetcher_;
+    bool bulk_fetch_enabled_;
 };
 
 }  // namespace rdc
