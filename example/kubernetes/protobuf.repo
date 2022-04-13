@@ -1,0 +1,7 @@
+[ussuri]
+name=protobuf
+baseurl=https://buildlogs.centos.org/centos/8/cloud/x86_64/openstack-ussuri
+enabled=1
+fastestmirror_enabled=0
+gpgcheck=0
+priority=1
