@@ -1,0 +1,161 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: rdc
+  labels:
+    app: rdc
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: rdc
+  template:
+    metadata:
+      labels:
+        app: rdc
+    spec:
+      priorityClassName: system-node-critical
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoSchedule
+          key: amd.com/gpu
+          operator: Exists
+      nodeSelector:
+        gpu: "amd"
+      containers:
+      - name: rdc
+        image: your_container_repository/rdc:5.1
+        imagePullPolicy: Always
+        command: ["/opt/rocm/rdc/bin/rdcd"]
+        args: ["-u"]
+        securityContext:
+          privileged: true
+          capabilities:
+            drop:
+            - all
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - while [ $(netstat -lntp |grep rdcd| wc -l) -ne 1 ]; do sleep 1; done
+          preStop:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - while [ $(netstat -lntp |grep 5000| wc -l) -ne 0 ]; do sleep 1; done
+        readinessProbe:
+          tcpSocket:
+            port: 50051
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 50051
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 20m
+            memory: 30Mi
+        ports:
+          - containerPort: 50051
+            name: rdc
+            protocol: TCP
+        volumeMounts:
+        - name: sys
+          mountPath: /sys
+      - name: prometheus-rdc
+        command: ["python3"]
+        args: ["/opt/rocm/rdc/python_binding/rdc_prometheus.py", "--rdc_unauth", "--enable_kubernetes_integration"]
+        image: your_container_repository/rdc:5.1
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+          capabilities:
+            drop:
+              - all
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 20m
+            memory: 100Mi
+        ports:
+          - containerPort: 5000
+            name: metrics
+            protocol: TCP
+        volumeMounts:
+        - name: sys
+          mountPath: /sys
+        - name: podresources-api
+          mountPath: /var/lib/kubelet/pod-resources
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: podresources-api
+          hostPath:
+            path: /var/lib/kubelet/pod-resources
+        - name: sys
+          hostPath:
+            path: /sys
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: rdc
+  name: rdc
+  namespace: kube-system
+spec:
+  ports:
+    - port: 5000
+      protocol: TCP
+      targetPort: 5000
+      name: metrics
+  selector:
+    app: rdc
+  type: ClusterIP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rdc
+  namespace: kube-system
+spec:
+  endpoints:
+    - interval: 30s
+      path: /metrics
+      port: metrics
+      relabelings:
+      - sourceLabels: [__meta_kubernetes_pod_node_name]
+        targetLabel: node
+  namespaceSelector:
+    matchNames:
+      - kube-system
+  selector:
+    matchLabels:
+      app: rdc
+
+
+
