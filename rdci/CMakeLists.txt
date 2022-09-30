@@ -92,20 +92,26 @@ add_executable(${RDCI_EXE} "${RDCI_SRC_LIST}")
 
 ## RUNPATH should help to run "rdci" without the usage of ldconfig
 if (DEFINED ENV{ROCM_RPATH})
-   set(RDC_RUNPATH "\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib64")
-   set(GRPC_RUNPATH "\$ORIGIN/../grpc/lib:\$ORIGIN/../grpc/lib64")
+   set(RDC_RUNPATH "\$ORIGIN:\$ORIGIN/../lib:\$ORIGIN/../lib64:\$ORIGIN/../lib/rdc:\$ORIGIN/../lib64/rdc")
+   set(GRPC_RUNPATH "\$ORIGIN/../grpc/lib:\$ORIGIN/../grpc/lib64:\$ORIGIN/../lib/rdc/grpc/lib:\$ORIGIN/../lib/rdc/grpc/lib64")
    set(CMAKE_EXE_LINKER_FLAGS "-Wl,--enable-new-dtags -Wl,--rpath,${RDC_RUNPATH}:${GRPC_RUNPATH} -Wl,--no-as-needed -Wl,-z,origin")
    set(CMAKE_SKIP_BUILD_RPATH TRUE)
    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
    set(CMAKE_SKIP_RPATH TRUE)
 
- # Run path can only include direct refer library, here is the indirect libs
+ # Run path can only include direct refer library, include the indirect libs
  # required by gRPC
-   set (RDCD_EXTRA_LIB absl_str_format_internal absl_strings absl_throw_delegate
-        absl_bad_optional_access absl_strings absl_throw_delegate absl_int128
-        absl_strings_internal absl_raw_logging_internal address_sorting
-        gpr upb ssl crypto )
-
+ # Get all absl library and re2
+ file(GLOB grpc_libs "${GRPC_ROOT}/lib*/lib*.so")
+ foreach(src_file ${grpc_libs})
+    get_filename_component(lib_name "${src_file}" NAME_WLE)
+    STRING(REGEX REPLACE "^lib" "" lib_name ${lib_name})  # strip out lib
+    if(lib_name MATCHES "absl.*" OR lib_name STREQUAL "re2")
+      set(RDCD_EXTRA_LIB ${RDCD_EXTRA_LIB} ${lib_name})
+    endif()
+ endforeach()
+ # Set other library
+ set(RDCD_EXTRA_LIB ${RDCD_EXTRA_LIB} address_sorting gpr upb ssl crypto)
 endif()
 
 target_link_libraries(${RDCI_EXE} ${RDCD_EXTRA_LIB} pthread dl rdc_bootstrap)
@@ -116,7 +122,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${RDCI_EXE}
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE
                                                     WORLD_READ WORLD_EXECUTE
         COMPONENT ${CLIENT_COMPONENT}
-        DESTINATION  ${RDC_CLIENT_INSTALL_PREFIX}/${RDC}/bin)
+        DESTINATION  ${RDC_CLIENT_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR})
 
 
 message("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
