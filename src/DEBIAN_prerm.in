@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 stop_rdc() {
     #stop RDC if running
     systemctl stop rdc
