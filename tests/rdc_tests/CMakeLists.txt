@@ -87,10 +87,13 @@ target_link_libraries(${RDCTST}
     PUBLIC rdc_bootstrap
     PUBLIC rdc
     PUBLIC rdc_ras
-    PUBLIC rdc_rocp
     PUBLIC c
     PUBLIC stdc++
     PUBLIC pthread)
+
+if(BUILD_ROCPTEST)
+    target_link_libraries(${RDCTST} PUBLIC rdc_rocp)
+endif()
 
 install(TARGETS ${RDCTST}
     DESTINATION ${RDC_SHARE_INSTALL_PREFIX}/rdctst_tests
