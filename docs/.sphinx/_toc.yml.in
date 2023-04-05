@@ -4,10 +4,16 @@ defaults:
   numbered: False
 root: index
 subtrees:
-    - entries:
-        - file: user_guide/index
+- caption: User Guide
+  entries:
+  - file: user_guide/index
+    subtrees:
+      - entries:
         - file: user_guide/install
         - file: user_guide/features
         - file: user_guide/integration
         - file: user_guide/handbook
         - file: user_guide/api
+- caption: API Reference
+  entries:
+  - file: api_ref
