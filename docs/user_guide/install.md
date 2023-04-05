@@ -84,7 +84,7 @@ $ sudo zypper install rdc<x.y.z>
 
 The components of RDC tool are as shown below:
 
-[High-level diagram of RDC components](../data/install_components.png)
+![High-level diagram of RDC components](../data/install_components.png)
 
 High-level diagram of RDC components.
 
