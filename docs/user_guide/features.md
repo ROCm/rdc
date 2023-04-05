@@ -2,9 +2,9 @@
 
 Note that RDC Tool is in active development. This section highlights the current feature set.
 
-[Components](../data/features.png)
+![Components](../data/features.png)
 
-RDC components and framework for describing features.
+RDC components and framework for describing features
 
 ## Discovery
 
@@ -160,9 +160,9 @@ Successfully stopped recording job 2
 
 A common use case is to record GPU statistics associated with any job or workload. The following example shows how all these features can be put together for this use case:
 
-[Jobs](../data/features_jobs.png)
+![Jobs](../data/features_jobs.png)
 
-An example showing how job statistics can be recorded.
+An example showing how job statistics can be recorded
 
 rdci commands
 
