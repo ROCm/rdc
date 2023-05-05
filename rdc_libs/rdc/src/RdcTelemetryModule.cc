@@ -166,4 +166,3 @@ rdc_status_t RdcTelemetryModule::rdc_telemetry_fields_value_get(
 
 }  // namespace rdc
 }  // namespace amd
-

@@ -20,19 +20,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 #include "rdc_lib/impl/RdcModuleMgrImpl.h"
-#include "rdc_lib/impl/RdcTelemetryModule.h"
+
 #include "rdc_lib/impl/RdcDiagnosticModule.h"
 #include "rdc_lib/impl/RdcRasLib.h"
 #include "rdc_lib/impl/RdcRocrLib.h"
+#include "rdc_lib/impl/RdcTelemetryModule.h"
 
 namespace amd {
 namespace rdc {
 
-RdcModuleMgrImpl::RdcModuleMgrImpl(const RdcMetricFetcherPtr& fetcher):
-                smi_lib_(std::make_shared<RdcSmiLib>(fetcher)) {
+RdcModuleMgrImpl::RdcModuleMgrImpl(const RdcMetricFetcherPtr& fetcher)
+    : smi_lib_(std::make_shared<RdcSmiLib>(fetcher)) {
     // The smi_lib_ always need to be loaded.
 }
-
 
 RdcTelemetryPtr RdcModuleMgrImpl::get_telemetry_module() {
     if (rdc_telemetry_module_) {
@@ -45,7 +45,8 @@ RdcTelemetryPtr RdcModuleMgrImpl::get_telemetry_module() {
     }
 
     if (!rdc_telemetry_module_) {
-        rdc_telemetry_module_.reset(new RdcTelemetryModule(smi_lib_, ras_lib_));
+        rdc_telemetry_module_.reset(
+            new RdcTelemetryModule(smi_lib_, ras_lib_));
     }
 
     return rdc_telemetry_module_;
@@ -75,4 +76,3 @@ RdcDiagnosticPtr RdcModuleMgrImpl::get_diagnostic_module() {
 
 }  // namespace rdc
 }  // namespace amd
-
