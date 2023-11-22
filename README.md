@@ -7,10 +7,10 @@ The ROCm™ Data Center Tool simplifies the administration and addresses key inf
 - Integration with third-party tools
 - Open source
 
-For up-to-date document and how to start using RDC from pre-built packages, please refer to the [**ROCm DataCenter Tool User Guide**](https://docs.amd.com/bundle?name_filter.field=title&name_filter.value=ROCm%20DataCenter%20Tool%20User%20Guide&rpp=10&sort.field=title&sort.value=desc)
+For up-to-date document and how to start using RDC from pre-built packages, please refer to the [**ROCm DataCenter Tool User Guide**](https://rocm.docs.amd.com/projects/rdc/en/latest/)
 
 # Supported platforms
-RDC can run on AMD ROCm supported platforms, please refer to the **List of Supported Operating Systems** under [ROCm Release Notes](https://docs.amd.com/bundle?name_filter.field=title&name_filter.value=ROCm%20Release%20Notes&rpp=10&sort.field=title&sort.value=desc)
+RDC can run on AMD ROCm supported platforms, please refer to the [List of Supported Operating Systems](https://rocm.docs.amd.com/en/latest/release/gpu_os_support.html)
 
 # Building RDC from source
 
@@ -25,7 +25,7 @@ RDC can run on AMD ROCm supported platforms, please refer to the **List of Suppo
 
     AMD ROCm platform (https://github.com/RadeonOpenCompute/ROCm)
         * It is recommended to install the complete AMD ROCm platform.
-          For installation instruction see https://docs.amd.com/category/Release%20Documentation
+          For installation instruction see https://rocm.docs.amd.com/en/latest/deploy/linux/quick_start.html
         * At the minimum, these two components are required
             (i)  AMD ROCm SMI Library (https://github.com/RadeonOpenCompute/rocm_smi_lib)
             (ii) AMD ROCk Kernel driver (https://github.com/RadeonOpenCompute/ROCK-Kernel-Driver)
@@ -40,21 +40,23 @@ The following tools are required for gRPC build & installation
 
     automake make g++ unzip build-essential autoconf libtool pkg-config libgflags-dev libgtest-dev clang-5.0 libc++-dev curl
 
-Download and build gRPC
-```bash
-git clone -b v1.44.0 https://github.com/grpc/grpc
-cd grpc
-git submodule update --init --recursive
-mkdir -p build
-```
+### Download and build gRPC
 
 By default (without using CMAKE_INSTALL_PREFIX option), gRPC will install to /usr/local lib, include and bin directories.  
 It is highly recommended to install gRPC into a unique directory.  
 Below example installs gRPC into /opt/grpc
 
 ```bash
+git clone -b v1.59.1 https://github.com/grpc/grpc --depth=1 --shallow-submodules --recurse-submodules
+cd grpc
 export GRPC_ROOT=/opt/grpc
-cmake -B build -DgRPC_INSTALL=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="$GRPC_ROOT"
+cmake -B build \
+    -DgRPC_INSTALL=ON \
+    -DgRPC_BUILD_TESTS=OFF \
+    -DBUILD_SHARED_LIBS=ON \
+    -DCMAKE_INSTALL_PREFIX="$GRPC_ROOT" \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_BUILD_TYPE=Release
 make -C build -j $(nproc)
 sudo make -C build install
 echo "$GRPC_ROOT" | sudo tee /etc/ld.so.conf.d/grpc.conf
@@ -102,7 +104,7 @@ ldconfig
 
 # Running RDC
 RDC supports encrypted communications between clients and servers. The
-communication can be configured to be *authenticated* or *not authenticated*. The [**user guide**](https://docs.amd.com/bundle/ROCm-Data-Center-Tool-User-Guide-v5.3/page/Developer_Handbook.html) has information on how to generate and install SSL keys and certificates for authentication. By default, authentication is enabled.
+communication can be configured to be *authenticated* or *not authenticated*. The [**user guide**](https://rocm.docs.amd.com/projects/rdc/en/latest/) has information on how to generate and install SSL keys and certificates for authentication. By default, authentication is enabled.
 
 ## Starting ROCm™ Data Center Daemon (RDCD)
 For an RDC client application to monitor and/or control a remote system, the RDC server daemon, *rdcd*, must be running on the remote system. *rdcd* can be configured to run with (a) full-capabilities which includes ability to set or change GPU configuration or (b) monitor-only capabilities which limits to monitoring GPU metrics.
@@ -139,7 +141,7 @@ systemctl start rdc         ## start rdc as systemd service
 ```
 
 ## Invoke RDC using ROCm™ Data Center Interface (RDCI)
-RDCI provides command-line interface to all RDC features. This CLI can be run locally or remotely. Refer to [**user guide**](https://docs.amd.com/bundle/ROCm-Data-Center-Tool-User-Guide-v5.3/page/Feature_Overview.html) for the current list of features.
+RDCI provides command-line interface to all RDC features. This CLI can be run locally or remotely. Refer to [**user guide**](https://rocm.docs.amd.com/projects/rdc/en/latest/user_guide/features.html) for the current list of features.
 
 ```bash
 ## sample rdci commands to test RDC functionality
