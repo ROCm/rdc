@@ -61,7 +61,9 @@ set(RDC_LIB "rdc")
 set(RDC_ROCR_LIB "rdc_rocr")
 set(RDC_ROCP_LIB "rdc_rocp")
 set(RDC_RVS_LIB "rdc_rvs")
-set(RDCCLIENT_LIB "rdc_client")
+if(BUILD_STANDALONE)
+  set(RDCCLIENT_LIB "rdc_client")
+endif()
 
 ################# Determine the library version #########################
 ## Setup the SO version based on git tags.
