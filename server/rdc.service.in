@@ -13,6 +13,7 @@ After=network.target
 #Requires=
 
 [Service]
+EnvironmentFile=-/etc/default/rdc
 User=rdc
 Group=rdc
 
@@ -24,7 +25,7 @@ AmbientCapabilities=CAP_DAC_OVERRIDE
 # If we need to start anything before rdcd, use this
 # ExecStartPre=
 
-ExecStart=/@CPACK_PACKAGING_INSTALL_PREFIX@/@CMAKE_INSTALL_BINDIR@/rdcd
+ExecStart=/@CPACK_PACKAGING_INSTALL_PREFIX@/@CMAKE_INSTALL_BINDIR@/rdcd $RDC_OPTS
 
 # If we need to start anything after rdcd use this
 # ExecStartPost=
