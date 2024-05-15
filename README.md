@@ -165,3 +165,6 @@ version will be the version number(ex:3.10.0) of ROCm where RDC was packaged wit
 RDC_LOG=DEBUG also works on rdci
 
 ERROR, INFO, DEBUG logging levels are supported
+
+# DEMO 0
+# DEMO 1
