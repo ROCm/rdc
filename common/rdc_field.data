@@ -52,6 +52,8 @@ FLD_DESC_ENT(RDC_FI_GPU_MEMORY_TOTAL,    "Total memory of the GPU instance",    
 FLD_DESC_ENT(RDC_FI_GPU_MM_ENC_UTIL,     "Mutilmedia encoder busy percentage",          "GPU_MM_ENC_UTIL",  true)
 FLD_DESC_ENT(RDC_FI_GPU_MM_DEC_UTIL,     "Mutilmedia decoder busy percentage",          "GPU_MM_DEC_UTIL",  true)
 
+FLD_DESC_ENT(RDC_FI_GPU_PAGE_RETRIED,    "Retried page of the GPU instance",            "GPU_PAGE_RETRIED", true)
+
 // ECC totals
 FLD_DESC_ENT(RDC_FI_ECC_CORRECT_TOTAL,   "Accumulated Single Error Correction",         "ECC_CORRECT",      true)
 FLD_DESC_ENT(RDC_FI_ECC_UNCORRECT_TOTAL, "Accumulated Double Error Detection",          "ECC_UNCORRECT",    true)
@@ -169,5 +171,11 @@ FLD_DESC_ENT(RDC_EVNT_NOTIF_POST_RESET,  "GPU reset just occurred",             
 FLD_DESC_ENT(RDC_EVNT_NOTIF_RING_HANG,   "GPU ring hang just occured",                  "RING_HANG",        false)
 
 // RDC health related fields
-FLD_DESC_ENT(RDC_HEALTH_POWER_THROTTLE_TIME,      "Power throttle status counter",              "POWER_THROTTLE_TIME",      false)
-FLD_DESC_ENT(RDC_HEALTH_THERMAL_THROTTLE_TIME,    "Total time(ms) in thermal throttle status",  "THERMAL_THROTTLE_TIME",    false)
+FLD_DESC_ENT(RDC_HEALTH_XGMI_ERROR,               "XGMI one or more errors detected",           "XGMI_ERROR",               true)
+FLD_DESC_ENT(RDC_HEALTH_PCIE_REPLAY_COUNT,        "Total PCIE replay count",                    "PCIE_REPLAY_COUNT",        true)
+FLD_DESC_ENT(RDC_HEALTH_RETIRED_PAGE_NUM,         "Retired page number",                        "RETIRED_PAGE_NUM",         true)
+FLD_DESC_ENT(RDC_HEALTH_PENDING_PAGE_NUM,         "Pending page number",                        "PENDING_PAGE_NUM",         true)
+FLD_DESC_ENT(RDC_HEALTH_RETIRED_PAGE_LIMIT,       "Retired page limit",                         "RETIRED_PAGE_LIMIT",       true)
+FLD_DESC_ENT(RDC_HEALTH_EEPROM_CONFIG_VALID,      "Verify checksum of EEPROM",                  "EEPROM_CONFIG_VALID",      true)
+FLD_DESC_ENT(RDC_HEALTH_POWER_THROTTLE_TIME,      "Power throttle status counter",              "POWER_THROTTLE_TIME",      true)
+FLD_DESC_ENT(RDC_HEALTH_THERMAL_THROTTLE_TIME,    "Total time(ms) in thermal throttle status",  "THERMAL_THROTTLE_TIME",    true)

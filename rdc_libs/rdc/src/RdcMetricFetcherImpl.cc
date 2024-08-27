@@ -655,6 +655,15 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
       }
       break;
     }
+    case RDC_FI_GPU_PAGE_RETRIED:
+      uint32_t num_pages;
+      amdsmi_retired_page_record_t info;
+      value->status = amdsmi_get_gpu_bad_page_info(processor_handle, &num_pages, &info);
+      value->type = INTEGER;
+      if (value->status == AMDSMI_STATUS_SUCCESS) {
+        value->value.l_int = num_pages;
+      }
+      break;
     case RDC_FI_OAM_ID: {
       amdsmi_asic_info_t asic_info;
       value->status = amdsmi_get_gpu_asic_info(processor_handle, &asic_info);
@@ -785,24 +794,92 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
     case RDC_FI_PCIE_BANDWIDTH:
       read_gpu_metrics_uint64_t();
       break;
-    case RDC_HEALTH_POWER_THROTTLE_TIME: {//gpu_metrics 1.6 
-      amdsmi_violation_status_t violation_status;
-      ret = amdsmi_get_violation_status(processor_handle, &violation_status);
+
+    case RDC_HEALTH_XGMI_ERROR: {
+      amdsmi_xgmi_status_t status;
+      ret = amdsmi_gpu_xgmi_error_status(processor_handle, &status);
       value->status = Smi2RdcError(ret);
-        if (AMDSMI_STATUS_SUCCESS == ret) {
-          value->type = INTEGER;
-          value->value.l_int = static_cast<int64_t>(violation_status.acc_ppt_pwr);
-        }
+      value->type = INTEGER;
+      if (value->status == AMDSMI_STATUS_SUCCESS) {
+        value->value.l_int = static_cast<int64_t>(status);
+      }
       break;
     }
-    case RDC_HEALTH_THERMAL_THROTTLE_TIME: {//gpu_metrics 1.6
+
+    case RDC_HEALTH_PCIE_REPLAY_COUNT: {
+      amdsmi_pcie_info_t pcie_info;
+      ret = amdsmi_get_pcie_info(processor_handle, &pcie_info);
+      value->status = Smi2RdcError(ret);
+      value->type = INTEGER;
+      if (value->status == AMDSMI_STATUS_SUCCESS) {
+        value->value.l_int = static_cast<int64_t>(pcie_info.pcie_metric.pcie_replay_count);
+      }
+      break;
+    }
+
+    case RDC_HEALTH_RETIRED_PAGE_NUM:
+    case RDC_HEALTH_PENDING_PAGE_NUM: {
+      uint32_t num_pages = 0;
+      ret = amdsmi_get_gpu_bad_page_info(processor_handle, &num_pages, nullptr);
+      if (AMDSMI_STATUS_SUCCESS == ret) {
+          if (RDC_HEALTH_RETIRED_PAGE_NUM == field_id) {
+            value->status = Smi2RdcError(ret);
+            value->type = INTEGER;
+            value->value.l_int = static_cast<int64_t>(num_pages);
+            break;
+          }
+
+          if ((0 < num_pages) &&
+              (RDC_HEALTH_PENDING_PAGE_NUM == field_id)) {
+            std::vector<amdsmi_retired_page_record_t> bad_page_info(num_pages);
+            ret = amdsmi_get_gpu_bad_page_info(processor_handle, &num_pages,
+                                               bad_page_info.data());
+            value->status = Smi2RdcError(ret);
+            value->type = INTEGER;
+            if (AMDSMI_STATUS_SUCCESS == ret) {
+              uint64_t pending_page_num = 0;
+              for (uint32_t i=0; i < num_pages; i++) {
+                if (AMDSMI_MEM_PAGE_STATUS_PENDING == bad_page_info[i].status)
+                    pending_page_num++;
+              }
+
+              value->value.l_int = static_cast<int64_t>(pending_page_num);
+            }
+          }
+      } else
+         value->status = Smi2RdcError(ret);
+      break;
+    }
+
+    case RDC_HEALTH_RETIRED_PAGE_LIMIT: {
+      uint32_t retired_page_threshold = 0;
+      ret = amdsmi_get_gpu_bad_page_threshold(processor_handle, &retired_page_threshold);
+      value->status = Smi2RdcError(ret);
+      value->type = INTEGER;
+      if (value->status == AMDSMI_STATUS_SUCCESS) {
+        value->value.l_int = static_cast<int64_t>(retired_page_threshold);
+      }
+      break;
+    }
+
+    case RDC_HEALTH_EEPROM_CONFIG_VALID: {
+      ret = amdsmi_gpu_validate_ras_eeprom(processor_handle);
+      value->status = Smi2RdcError(ret);
+      break;
+    }
+
+    case RDC_HEALTH_POWER_THROTTLE_TIME:
+    case RDC_HEALTH_THERMAL_THROTTLE_TIME: {
       amdsmi_violation_status_t violation_status;
       ret = amdsmi_get_violation_status(processor_handle, &violation_status);
       value->status = Smi2RdcError(ret);
-        if (AMDSMI_STATUS_SUCCESS == ret) {
-          value->type = INTEGER;
-          value->value.l_int = static_cast<int64_t>(violation_status.acc_prochot_thrm);
-        }
+      value->type = INTEGER;
+      if (value->status == AMDSMI_STATUS_SUCCESS) {
+        if (RDC_HEALTH_POWER_THROTTLE_TIME == field_id)
+          value->value.l_int = static_cast<int64_t>(violation_status.acc_ppt_pwr);
+        if (RDC_HEALTH_THERMAL_THROTTLE_TIME == field_id)
+          value->value.l_int = static_cast<int64_t>(violation_status.acc_socket_thrm);
+      }
       break;
     }
 

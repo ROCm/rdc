@@ -366,6 +366,8 @@ const char* rdc_status_string(rdc_status_t result) {
       return "Data was requested, but none was found";
     case RDC_ST_PERM_ERROR:
       return "Insufficient permission to complete operation";
+    case RDC_ST_CORRUPTED_EEPROM:
+      return "EEPROM is corrupted";
     case RDC_ST_UNKNOWN_ERROR:
       return "Unknown error";
     default:
@@ -401,6 +403,45 @@ rdc_field_t get_field_id_from_name(const char* name) {
   return RDC_FI_INVALID;
 }
 
+rdc_status_t rdc_health_set(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                            unsigned int components) {
+  if (!p_rdc_handle) {
+    return RDC_ST_INVALID_HANDLER;
+  }
+
+  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)
+      ->rdc_health_set(group_id, components);
+}
+
+rdc_status_t rdc_health_get(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                            unsigned int* components) {
+  if (!p_rdc_handle) {
+    return RDC_ST_INVALID_HANDLER;
+  }
+
+  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)
+      ->rdc_health_get(group_id, components);
+}
+
+rdc_status_t rdc_health_check(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                              rdc_health_response_t *response) {
+  if (!p_rdc_handle) {
+    return RDC_ST_INVALID_HANDLER;
+  }
+
+  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)
+      ->rdc_health_check(group_id, response);
+}
+
+rdc_status_t rdc_health_clear(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id) {
+  if (!p_rdc_handle) {
+    return RDC_ST_INVALID_HANDLER;
+  }
+
+  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)
+      ->rdc_health_clear(group_id);
+}
+
 char* strncpy_with_null(char* dest, const char* src, size_t n) {
   if (n == 0) {
     return dest;
@@ -408,4 +449,50 @@ char* strncpy_with_null(char* dest, const char* src, size_t n) {
   strncpy(dest, src, n - 1);
   dest[n - 1] = '\0';
   return dest;
+}
+
+rdc_status_t rdc_policy_set(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                            rdc_policy_t policy) {
+  if (!p_rdc_handle) {
+    return RDC_ST_INVALID_HANDLER;
+  }
+
+  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)->rdc_policy_set(group_id, policy);
+}
+
+rdc_status_t rdc_policy_get(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id, uint32_t* count,
+                            rdc_policy_t policies[RDC_MAX_POLICY_SETTINGS]) {
+  if (!p_rdc_handle) {
+    return RDC_ST_INVALID_HANDLER;
+  }
+
+  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)->rdc_policy_get(group_id, count, policies);
+}
+
+
+rdc_status_t rdc_policy_delete(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                                         rdc_policy_condition_type_t condition_type){
+  if (!p_rdc_handle) {
+    return RDC_ST_INVALID_HANDLER;
+  }
+
+  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)->rdc_policy_delete(group_id, condition_type);
+}
+
+
+
+rdc_status_t rdc_policy_register(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                                 rdc_policy_register_callback callback) {
+  if (!p_rdc_handle) {
+    return RDC_ST_INVALID_HANDLER;
+  }
+  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)
+      ->rdc_policy_register(group_id, callback);
+}
+rdc_status_t rdc_policy_unregister(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id) {
+  if (!p_rdc_handle) {
+    return RDC_ST_INVALID_HANDLER;
+  }
+  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)
+      ->rdc_policy_unregister(group_id);
 }

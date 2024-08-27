@@ -79,6 +79,7 @@ typedef enum {
                             //!<   but none was found
   RDC_ST_PERM_ERROR,        //!< Insufficient permission to complete
                             //!<   operation
+  RDC_ST_CORRUPTED_EEPROM,  //!< EEPROM is corrupted
   RDC_ST_DISABLED_MODULE,   //!< Attempted loading disabled module
 
   RDC_ST_UNKNOWN_ERROR = 0xFFFFFFFF  //!< Unknown error
@@ -188,6 +189,10 @@ typedef enum {
   RDC_FI_GPU_MM_ENC_UTIL,  //!< Multimedia encoder busy percentage
   RDC_FI_GPU_MM_DEC_UTIL,  //!< Multimedia decoder busy percentage
 
+  /**
+   * @brief GPU page related fields
+   */
+  RDC_FI_GPU_PAGE_RETRIED = 550,  //!< Retried page of the GPU instance
   /**
    * @brief ECC related fields
    */
@@ -339,8 +344,18 @@ typedef enum {
   RDC_EVNT_NOTIF_RING_HANG,         //!< GPU ring hang just occurred
 
   RDC_EVNT_NOTIF_LAST = RDC_EVNT_NOTIF_RING_HANG,
-  RDC_HEALTH_POWER_THROTTLE_TIME = 3006,       //!< Power throttle status counter
-  RDC_HEALTH_THERMAL_THROTTLE_TIME = 3007,     //!< Total time in thermal throttle status (microseconds)
+
+  /**
+   * @brief RDC health related fields
+   */
+  RDC_HEALTH_XGMI_ERROR = 3000,         //!< XGMI one or more errors detected
+  RDC_HEALTH_PCIE_REPLAY_COUNT,         //!< Total PCIE replay count
+  RDC_HEALTH_RETIRED_PAGE_NUM,          //!< Retired page number
+  RDC_HEALTH_PENDING_PAGE_NUM,          //!< Pending page number
+  RDC_HEALTH_RETIRED_PAGE_LIMIT,        //!< the threshold of retired page number
+  RDC_HEALTH_EEPROM_CONFIG_VALID,       //!< Reads the EEPROM and verifies the checksums
+  RDC_HEALTH_POWER_THROTTLE_TIME,       //!< Power throttle status counter
+  RDC_HEALTH_THERMAL_THROTTLE_TIME,     //!< Total time in thermal throttle status (microseconds)
 } rdc_field_t;
 
 // even and odd numbers are used for correctable and uncorrectable errors
@@ -564,6 +579,108 @@ typedef struct {
   uint32_t results_count;
   rdc_diag_test_result_t diag_info[MAX_TEST_CASES];
 } rdc_diag_response_t;
+
+/**
+ * @brief The policy type to support
+ */
+typedef enum {
+  RDC_POLICY_COND_FIRST = 0,
+  RDC_POLICY_COND_MAX_PAGE_RETRIED = RDC_POLICY_COND_FIRST,  //!< Max number of page retired
+  RDC_POLICY_COND_THERMAL,  //!< Temperature threshold, millidegree Celsius
+  RDC_POLICY_COND_POWER,    //!< Power threshold, unit milliwatt
+  RDC_POLICY_COND_LAST = RDC_POLICY_COND_POWER,
+  RDC_POLICY_COND_MAX
+} rdc_policy_condition_type_t;
+
+typedef struct {
+  rdc_policy_condition_type_t type;
+  int64_t value;
+} rdc_policy_condition_t;
+
+typedef enum { RDC_POLICY_ACTION_NONE, RDC_POLICY_ACTION_GPU_RESET } rdc_policy_action_t;
+
+/**
+ * @brief The structure to define policy to enforce on GPU.
+ */
+typedef struct {
+  rdc_policy_condition_t condition;  //!< condition to meet
+  rdc_policy_action_t action; //!< Action to take
+} rdc_policy_t;
+
+/**
+ * @brief type of health watches
+ */
+typedef enum {
+  RDC_HEALTH_WATCH_PCIE = 0x1,      //!< PCIe system watches
+  RDC_HEALTH_WATCH_XGMI = 0x2,      //!< XGMI system watches
+  RDC_HEALTH_WATCH_MEM = 0x4,       //!< Memory watches
+  RDC_HEALTH_WATCH_EEPROM = 0x8,    //!< EEPROM watches
+  RDC_HEALTH_WATCH_THERMAL = 0x10,  //!< Temperature watches
+  RDC_HEALTH_WATCH_POWER = 0x20,    //!< Power watches
+} rdc_health_system_t;
+
+/**
+ * @brief type of health result
+ */
+typedef enum {
+  RDC_HEALTH_RESULT_PASS,  //!< The health test pass
+  RDC_HEALTH_RESULT_WARN,  //!< The health test has warnings
+  RDC_HEALTH_RESULT_FAIL   //!< The health test fail
+} rdc_health_result_t;
+
+/**
+ * @brief The maximum length of the health messages
+ */
+#define MAX_HEALTH_MSG_LENGTH 4096
+
+/**
+ * 8 replays per minute is the maximum recommended
+ */
+#define PCIE_MAX_REPLAYS_PERMIN 8
+
+// The error code set at rdc_health_incidents_t.error.code
+typedef enum {
+  RDC_FR_PCI_REPLAY_RATE = 1000,
+  RDC_FR_ECC_UNCORRECTABLE_DETECTED = 1001,
+  RDC_FR_PENDING_PAGE_RETIREMENTS = 1002,
+  RDC_FR_RETIRED_PAGES_LIMIT = 1003,
+  RDC_FR_RETIRED_PAGES_UNCORRECTABLE_LIMIT = 1004,
+  RDC_FR_CLOCKS_THROTTLE_THERMAL = 1005,
+  RDC_FR_CLOCKS_THROTTLE_POWER = 1006,
+  RDC_FR_XGMI_SINGLE_ERROR = 1007,
+  RDC_FR_XGMI_MULTIPLE_ERROR = 1008,
+  RDC_FR_CORRUPT_EEPROM = 1009
+} rdc_health_error_code_t;
+
+/**
+ * @brief details of the health errors
+ */
+typedef struct {
+  char      msg[MAX_HEALTH_MSG_LENGTH];  //!< The test result details
+  uint32_t  code;                        //!< The low level error code
+} rdc_health_detail_t;
+
+/**
+ * @brief details of the per health incidents
+ */
+typedef struct {
+    uint32_t              gpu_index;  //!< which GPU in this group have the issue
+    rdc_health_system_t   component;  //!< which components have the issue
+    rdc_health_result_t   health;     //!< health diagnosis of this incident
+    rdc_health_detail_t   error;      //!< The details of the error, rdc_health_error_code_t
+} rdc_health_incidents_t;
+
+
+#define HEALTH_MAX_ERROR_ITEMS 64
+
+/**
+ * @brief The health responses for test cases
+ */
+typedef struct {
+    rdc_health_result_t       overall_health;                     //!< The overall health of this entire host
+    unsigned int              incidents_count;                    //!< The number of health incidents reported in this struct
+    rdc_health_incidents_t    incidents[HEALTH_MAX_ERROR_ITEMS];  //!< Report of the errors detected
+} rdc_health_response_t;
 
 /**
  *  @brief Initialize ROCm RDC.
@@ -1143,6 +1260,173 @@ rdc_field_t get_field_id_from_name(const char* name);
  *  @retval The string to describe the RDC diagnostic result.
  */
 const char* rdc_diagnostic_result_string(rdc_diag_result_t result);
+
+/**
+ *  @brief Set the RDC policy. Each group has multiple policies, these policies can be set by this
+ * API one by one. Multiple calls of this API will override the existing policy.
+ *
+ *  @details Set the RDC policy
+ *
+ *  @param[in] p_rdc_handle The RDC handler.
+ *
+ *  @param[in] group_id The GPU group id.
+ *
+ *  @param[in] policy  The policy to set
+ *
+ *
+ *  @retval ::RDC_ST_OK is returned upon successful call.
+ */
+rdc_status_t rdc_policy_set(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                            rdc_policy_t policy);
+
+#define RDC_MAX_POLICY_SETTINGS 32
+
+/**
+ *  @brief Get the RDC policy
+ *
+ *  @details Get the RDC policy
+ *
+ *  @param[in] p_rdc_handle The RDC handler.
+ *
+ *  @param[in] group_id The GPU group id.
+ *
+ *  @param[out] count The size of policies array
+ *
+ *  @param[out] policies  The policies to get
+ *
+ *
+ *  @retval ::RDC_ST_OK is returned upon successful call.
+ */
+rdc_status_t rdc_policy_get(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id, uint32_t* count,
+                            rdc_policy_t policies[RDC_MAX_POLICY_SETTINGS]);
+
+/**
+ *  @brief delete the RDC policy for this group based on condition type
+ *
+ *  @details clear the RDC policy for this group based on condition type. In a GPU group, only one
+ * policy can be set for a specific rdc_policy_condition_type_t
+ *
+ *  @param[in] p_rdc_handle The RDC handler.
+ *
+ *  @param[in] group_id The GPU group id
+ *
+ *  @param[in] condition_type The condition type to delete
+ *
+ *  @retval ::RDC_ST_OK is returned upon successful call.
+ */
+
+rdc_status_t rdc_policy_delete(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                               rdc_policy_condition_type_t condition_type);
+
+/**
+ * Define the structure is used in RDC policy callback
+ */
+typedef struct {
+  unsigned int version;
+  rdc_policy_condition_t condition;  //!< the condition that is meet
+  rdc_gpu_group_t group_id;          //!< The group id trigger this callback
+  int64_t value;          //!< The current value that meet the condition
+} rdc_policy_callback_response_t;
+
+/**
+ * The user data is the rdc_policy_callback_response_t
+ */
+typedef int (*rdc_policy_register_callback)(rdc_policy_callback_response_t* userData);
+
+/**
+ *  @brief Register a function to be called when policy condition is meet.
+ *
+ *  @details Register the RDC policy callback
+ *
+ *  @param[in] p_rdc_handle The RDC handler.
+ *
+ *  @param[in] group_id The GPU group id.
+ *
+ *  @param[in] callback  The callback function to be called when condition meet.
+ *
+ *  @retval ::RDC_ST_OK is returned upon successful call.
+ */
+rdc_status_t rdc_policy_register(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                                 rdc_policy_register_callback callback);
+
+/**
+ *  @brief un-register a policy callback function for a conditioin.
+ *
+ *  @details Un-register the policy callback for a condition.
+ *
+ *  @param[in] p_rdc_handle The RDC handler.
+ *
+ *  @param[in] group_id The GPU group id.
+ *
+ *  @retval ::RDC_ST_OK is returned upon successful call.
+ */
+rdc_status_t rdc_policy_unregister(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id);
+
+/**
+ *  @brief enable the health check for a group
+ *
+ *  @details For each group, only one parameter can be set. If you want to
+ *  clear the setting for a group, set component == 0x0
+ *
+ *  @param[in] p_rdc_handle The RDC handler.
+ *
+ *  @param[in] group_id The GPU group id.
+ *
+ *  @param[in] components  The list of components that should be enabled for health check
+ *  for example, RDC_HEALTH_WATCH_THERMAL | RDC_HEALTH_WATCH_POWER
+ *
+ *  @retval ::RDC_ST_OK is returned upon successful call.
+ */
+rdc_status_t rdc_health_set(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                            unsigned int components);
+
+/**
+ *  @brief get the health check settings of a group
+ *
+ *  @details get the health check settings of a component
+ *
+ *  @param[in] p_rdc_handle The RDC handler.
+ *
+ *  @param[in] group_id The GPU group id.
+ *
+ *  @param[out] components  The list of components that should be enabled for health check
+ *  for example, RDC_HEALTH_WATCH_THERMAL | RDC_HEALTH_WATCH_POWER
+ *  if it is 0x0, then the health check not set for the group yet.
+ *
+ *  @retval ::RDC_ST_OK is returned upon successful call.
+ */
+rdc_status_t rdc_health_get(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                            unsigned int* components);
+
+/**
+ *  @brief Check health watch results
+ *
+ *  @details If it has incidents.
+ *  For each incident, check the component and error message.
+ *
+ *  @param[in] p_rdc_handle The RDC handler.
+ *
+ *  @param[in] group_id The GPU group id.
+ *
+ *  @param[inout] response  The detail results of the health.
+ *
+ *  @retval ::RDC_ST_OK is returned upon successful call.
+ */
+rdc_status_t rdc_health_check(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id,
+                              rdc_health_response_t* response);
+
+/**
+ *  @brief clear the health watch
+ *
+ *  @details For each group, clear the setting.
+ *
+ *  @param[in] p_rdc_handle The RDC handler.
+ *
+ *  @param[in] group_id The GPU group id.
+ *
+ *  @retval ::RDC_ST_OK is returned upon successful call.
+ */
+rdc_status_t rdc_health_clear(rdc_handle_t p_rdc_handle, rdc_gpu_group_t group_id);
 
 #ifdef __cplusplus
 }
