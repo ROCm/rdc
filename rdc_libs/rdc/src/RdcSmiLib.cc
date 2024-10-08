@@ -179,6 +179,7 @@ rdc_status_t RdcSmiLib::rdc_telemetry_fields_query(uint32_t field_ids[MAX_NUM_FI
       RDC_EVNT_XGMI_1_THRPUT,   RDC_EVNT_XGMI_2_THRPUT,   RDC_EVNT_XGMI_3_THRPUT,
       RDC_EVNT_XGMI_4_THRPUT,   RDC_EVNT_XGMI_5_THRPUT,   RDC_FI_OAM_ID,
       RDC_HEALTH_POWER_THROTTLE_TIME, RDC_HEALTH_THERMAL_THROTTLE_TIME,
+      RDC_FI_GPU_MM_ENC_UTIL,   RDC_FI_GPU_MM_DEC_UTIL,
   };
   std::copy(fields.begin(), fields.end(), field_ids);
   *field_count = fields.size();
