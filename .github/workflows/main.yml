@@ -179,3 +179,25 @@ jobs:
         else
           echo "No missing libs found!"
         fi
+
+    - name: Build RDC Examples
+      shell: bash
+      run: |
+        cd /opt/rocm/share/rdc/example
+        cmake -B build
+        make -C build -j $(nproc)
+      
+    - name: Test RDC Examples
+      shell: bash
+      run: |
+        cd /opt/rocm/share/rdc/example/build
+        for example in ./diagnostic ./fieldvalue ./jobstats ./rocprofiler; do
+          echo "Testing $example..."
+          echo 0 | $example
+          if [ $? -ne 0 ]; then
+            echo "Example $example failed!"
+            exit 1
+          fi
+        done
+        echo "All examples ran successfully!"
+    

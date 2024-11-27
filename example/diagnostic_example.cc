@@ -103,7 +103,8 @@ int main(int, char**) {
 
   // (2) start to run short diagnostic.
   rdc_diag_response_t response;
-  result = rdc_diagnostic_run(rdc_handle, group_id, RDC_DIAG_LVL_SHORT, nullptr, 0, &response);
+  rdc_diag_callback_t callback;
+  result = rdc_diagnostic_run(rdc_handle, group_id, RDC_DIAG_LVL_SHORT, nullptr, 0, &response, &callback);
 
   if (result != RDC_ST_OK) {
     std::cout << "Error run RDC_DIAG_LVL_SHORT diagnostic. Return: " << rdc_status_string(result);
