@@ -187,6 +187,15 @@ jobs:
         cmake -B build
         make -C build -j $(nproc)
       
+    - name: Debug Installed Libraries
+      shell: bash
+      run: |
+        echo "Searching for libamd_smi.so.24..."
+        find /opt/rocm -name libamd_smi.so.24
+        dpkg -L rocm-smi-lib
+        ls -l /opt/rocm/lib
+      
+
     - name: Test RDC Examples
       shell: bash
       run: |
