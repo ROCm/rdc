@@ -152,4 +152,53 @@ jobs:
           fi
         done
         echo "All examples ran successfully!"
-    
+          
+
+
+  test:
+    needs: build
+    runs-on: lstt
+    container: rocm/rocm-build-ubuntu-22.04:6.2
+
+    steps:
+    - name: Set up apt repos
+      run: |
+        cat /etc/os-release
+        apt update -y
+        # provides add-apt-repository and support for caching actions
+        apt install -y software-properties-common jq nodejs
+
+    - name: Package RDC
+      uses: actions/download-artifact@v3
+      with:
+        name: rdc
+        path: /opt/
+
+    - name: Test RDC installation
+      shell: bash
+      run: |
+        COUNT=$(find /opt/ -iname 'rdc*.deb' | wc -l)
+        test "$COUNT" -eq '2'
+        dpkg --force-all -i /opt/rdc*.deb
+        # confirm binaries are installed
+        find $ROCM_DIR/bin -maxdepth 1 -iname rdcd
+        find $ROCM_DIR/bin -maxdepth 1 -iname rdci
+        find $ROCM_DIR/share/rdc -iname rdctst
+        # confirm that libraries are installed
+        MISSING_LIBS=()
+        for lib in librdc.so librdc_bootstrap.so librdc_client.so; do
+          test -e "$ROCM_DIR/lib/$lib" || MISSING_LIBS+=("$lib")
+        done
+        for lib in librdc_rocr.so librdc_rocp.so; do
+          test -e "$ROCM_DIR/lib/rdc/$lib" || MISSING_LIBS+=("$lib")
+        done
+
+        if test "${#MISSING_LIBS[@]}" != "0"; then
+          echo "Missing libs found!"
+          for lib in "${MISSING_LIBS[@]}"; do
+            echo "- $lib"
+          done
+          exit 1
+        else
+          echo "No missing libs found!"
+        fi
