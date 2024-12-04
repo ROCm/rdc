@@ -82,6 +82,14 @@ option(CMAKE_VERBOSE_MAKEFILE "Enable verbose output" OFF)
 
 option(CMAKE_EXPORT_COMPILE_COMMANDS "Export compile commands for linters and autocompleters" ON)
 
+execute_process(
+    COMMAND ${GIT} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+message("The HASH value of the current HEAD submission in this RDC code repository is : " ${GIT_HASH})
+
 # Don't print 'Up-to-date' when installing
 set(CMAKE_INSTALL_MESSAGE LAZY)
 
@@ -186,11 +194,18 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE CACHE BOOL "Use link path for RPATH")
 
 ## Add address sanitizer
 if(${ADDRESS_SANITIZER})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -shared-libasan")
-    message(STATUS "ADDRESS_SANITIZE: CMAKE_CXX_FLAGS=: ${CMAKE_CXX_FLAGS}")
-    message(STATUS "ADDRESS_SANITIZE: CMAKE_EXE_LINKER_FLAGS=: ${CMAKE_EXE_LINKER_FLAGS}")
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+        message(STATUS "ADDRESS_SANITIZE: CMAKE_CXX_FLAGS=: ${CMAKE_CXX_FLAGS}")
+        message(STATUS "ADDRESS_SANITIZE: CMAKE_EXE_LINKER_FLAGS=: ${CMAKE_EXE_LINKER_FLAGS}")
+    else()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -shared-libasan")
+        message(STATUS "ADDRESS_SANITIZE: CMAKE_CXX_FLAGS=: ${CMAKE_CXX_FLAGS}")
+        message(STATUS "ADDRESS_SANITIZE: CMAKE_EXE_LINKER_FLAGS=: ${CMAKE_EXE_LINKER_FLAGS}")
+    endif()
 endif()
 
 # Create a configure file to get version info from within library
@@ -276,9 +291,12 @@ if(BUILD_STANDALONE)
                 COMPONENT ${SERVER_COMPONENT})
         endif()
         # Also include dev setup for people do not want to build grpc
-        install(DIRECTORY ${GRPC_ROOT}/bin
-            USE_SOURCE_PERMISSIONS
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/${RDC}/grpc
+        file(GLOB install_bin_files "${GRPC_ROOT}/bin/*")
+        foreach(ITEM ${install_bin_files})
+            LIST( APPEND bin_files "${ITEM}" )
+        endforeach()
+        INSTALL( FILES ${bin_files}
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/${RDC}/grpc/bin
             COMPONENT ${SERVER_COMPONENT})
 
         install(DIRECTORY ${GRPC_ROOT}/include
@@ -361,19 +379,19 @@ endif()
 set(INST_SCR_PERM OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 configure_file(
     "${PROJECT_SOURCE_DIR}/src/DEBIAN_postinst.in"
-    "${PROJECT_SOURCE_DIR}/DEBIAN/postinst" FILE_PERMISSIONS ${INST_SCR_PERM})
+    "${PROJECT_SOURCE_DIR}/DEBIAN/postinst" FILE_PERMISSIONS ${INST_SCR_PERM} @ONLY)
 configure_file(
     "${PROJECT_SOURCE_DIR}/src/DEBIAN_prerm.in"
-    "${PROJECT_SOURCE_DIR}/DEBIAN/prerm" FILE_PERMISSIONS ${INST_SCR_PERM})
+    "${PROJECT_SOURCE_DIR}/DEBIAN/prerm" FILE_PERMISSIONS ${INST_SCR_PERM} @ONLY)
 configure_file(
     "${PROJECT_SOURCE_DIR}/src/RPM_rpm_post.in"
-    "${PROJECT_SOURCE_DIR}/RPM/rpm_post" FILE_PERMISSIONS ${INST_SCR_PERM})
+    "${PROJECT_SOURCE_DIR}/RPM/rpm_post" FILE_PERMISSIONS ${INST_SCR_PERM} @ONLY)
 configure_file(
     "${PROJECT_SOURCE_DIR}/src/RPM_preun.in"
-    "${PROJECT_SOURCE_DIR}/RPM/rpm_preun" FILE_PERMISSIONS ${INST_SCR_PERM})
+    "${PROJECT_SOURCE_DIR}/RPM/rpm_preun" FILE_PERMISSIONS ${INST_SCR_PERM} @ONLY)
 configure_file(
     "${PROJECT_SOURCE_DIR}/src/RPM_postun.in"
-    "${PROJECT_SOURCE_DIR}/RPM/rpm_postun" FILE_PERMISSIONS ${INST_SCR_PERM})
+    "${PROJECT_SOURCE_DIR}/RPM/rpm_postun" FILE_PERMISSIONS ${INST_SCR_PERM} @ONLY)
 if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
     set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}.$ENV{ROCM_LIBPATCH_VERSION}")
     message("Using CPACK_PACKAGE_VERSION ${CPACK_PACKAGE_VERSION}")

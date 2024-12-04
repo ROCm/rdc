@@ -79,6 +79,7 @@ typedef enum {
                             //!<   but none was found
   RDC_ST_PERM_ERROR,        //!< Insufficient permission to complete
                             //!<   operation
+  RDC_ST_DISABLED_MODULE,   //!< Attempted loading disabled module
 
   RDC_ST_UNKNOWN_ERROR = 0xFFFFFFFF  //!< Unknown error
 } rdc_status_t;
@@ -124,7 +125,7 @@ typedef enum { INTEGER = 0, DOUBLE, STRING, BLOB } rdc_field_type_t;
 /**
  * @brief Max number of GPUs supported by RDC
  */
-#define RDC_MAX_NUM_DEVICES 16
+#define RDC_MAX_NUM_DEVICES 128
 
 /**
  * @brief The max fields in a field group
@@ -140,6 +141,11 @@ typedef enum { INTEGER = 0, DOUBLE, STRING, BLOB } rdc_field_type_t;
  * @brief The max number of the field groups
  */
 #define RDC_MAX_NUM_FIELD_GROUPS 64
+
+/**
+ * @brief The max string length occupied by version information
+ */
+#define RDC_MAX_VERSION_STR_LENGTH 60
 
 /**
  * These enums are used to specify a particular field to be retrieved.
@@ -246,15 +252,18 @@ typedef enum {
   RDC_FI_XGMI_5_WRITE_KB,  //!< XGMI_5 accumulated data write size (KB)
   RDC_FI_XGMI_6_WRITE_KB,  //!< XGMI_6 accumulated data write size (KB)
   RDC_FI_XGMI_7_WRITE_KB,  //!< XGMI_7 accumulated data write size (KB)
+  RDC_FI_XGMI_TOTAL_READ_KB,      //!< XGMI_SUM accumulated data read size (KB)
+  RDC_FI_XGMI_TOTAL_WRITE_KB,      //!< XGMI_SUM accumulated data write size (KB)
 
   /**
    * @brief ROC-profiler related fields
    */
-  RDC_FI_PROF_MEAN_OCCUPANCY_PER_CU = 800,
-  RDC_FI_PROF_MEAN_OCCUPANCY_PER_ACTIVE_CU,
+  RDC_FI_PROF_OCCUPANCY_PERCENT = 800,
   RDC_FI_PROF_ACTIVE_CYCLES,
   RDC_FI_PROF_ACTIVE_WAVES,
   RDC_FI_PROF_ELAPSED_CYCLES,
+  RDC_FI_PROF_TENSOR_ACTIVE_PERCENT,
+  RDC_FI_PROF_GPU_UTIL_PERCENT,
   // metrics below are divided by time passed
   RDC_FI_PROF_EVAL_MEM_R_BW,
   RDC_FI_PROF_EVAL_MEM_W_BW,
@@ -342,6 +351,13 @@ typedef uint32_t rdc_field_grp_t;  //!< Field group ID type
 typedef struct {
   char device_name[RDC_MAX_STR_LENGTH];  //!< Name of the device.
 } rdc_device_attributes_t;
+
+/**
+ * @brief Store version information for each component
+ */
+typedef struct {
+  char version[RDC_MAX_VERSION_STR_LENGTH];
+} rdc_component_version_t;
 
 /**
  * @brief The structure to store the group info
@@ -475,6 +491,14 @@ typedef enum {
   RDC_DIAG_GPU_PARAMETERS,  //!< GPU parameters in range
   RDC_DIAG_TEST_LAST = RDC_DIAG_GPU_PARAMETERS
 } rdc_diag_test_cases_t;
+
+/**
+ * @brief Type of Components
+ */
+typedef enum {
+  RDC_AMDMSI_COMPONENT
+  //If needed later, add them one by one
+} rdc_component_t;
 
 /**
  * @brief The maximum test cases to run
@@ -749,6 +773,21 @@ rdc_status_t rdc_device_get_all(rdc_handle_t p_rdc_handle,
  */
 rdc_status_t rdc_device_get_attributes(rdc_handle_t p_rdc_handle, uint32_t gpu_index,
                                        rdc_device_attributes_t* p_rdc_attr);
+
+/**
+ *  @brief Get version information of components used by rdc.
+ *
+ *  @details Given a component type, return its version information.
+ *
+ *  @param[in] p_rdc_handle The RDC handler.
+ *
+ *  @param[in] component Type of Components. See rdc_component_t definition for details.
+ *
+ *  @param[out] p_rdc_compv Version information of the corresponding component.
+ *
+ *  @retval ::RDC_ST_OK is returned upon successful call.
+ */
+rdc_status_t rdc_device_get_component_version(rdc_handle_t p_rdc_handle, rdc_component_t component, rdc_component_version_t* p_rdc_compv);
 
 /**
  *  @brief Create a group contains multiple GPUs

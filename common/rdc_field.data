@@ -103,6 +103,7 @@ FLD_DESC_ENT(RDC_FI_XGMI_4_READ_KB,      "XGMI4 accumulated data read size (KB)"
 FLD_DESC_ENT(RDC_FI_XGMI_5_READ_KB,      "XGMI5 accumulated data read size (KB)",       "XGMI_5_READ",      true)
 FLD_DESC_ENT(RDC_FI_XGMI_6_READ_KB,      "XGMI6 accumulated data read size (KB)",       "XGMI_6_READ",      true)
 FLD_DESC_ENT(RDC_FI_XGMI_7_READ_KB,      "XGMI7 accumulated data read size (KB)",       "XGMI_7_READ",      true)
+FLD_DESC_ENT(RDC_FI_XGMI_TOTAL_READ_KB,    "XGMI accumlated data read size across all lanes (KB)", "XGMI_TOTAL_READ", true)
 
 FLD_DESC_ENT(RDC_FI_XGMI_0_WRITE_KB,     "XGMI0 accumulated data write size (KB)",      "XGMI_0_WRITE",     true)
 FLD_DESC_ENT(RDC_FI_XGMI_1_WRITE_KB,     "XGMI1 accumulated data write size (KB)",      "XGMI_1_WRITE",     true)
@@ -112,24 +113,25 @@ FLD_DESC_ENT(RDC_FI_XGMI_4_WRITE_KB,     "XGMI4 accumulated data write size (KB)
 FLD_DESC_ENT(RDC_FI_XGMI_5_WRITE_KB,     "XGMI5 accumulated data write size (KB)",      "XGMI_5_WRITE",     true)
 FLD_DESC_ENT(RDC_FI_XGMI_6_WRITE_KB,     "XGMI6 accumulated data write size (KB)",      "XGMI_6_WRITE",     true)
 FLD_DESC_ENT(RDC_FI_XGMI_7_WRITE_KB,     "XGMI7 accumulated data write size (KB)",      "XGMI_7_WRITE",     true)
-
+FLD_DESC_ENT(RDC_FI_XGMI_TOTAL_WRITE_KB,    "XGMI accumlated data write size across all lanes (KB)", "XGMI_TOTAL_WRITE", true)
 
 
 // ROCProfiler fields
 // This doesn't map to rocprofiler counters directly
 // See counter_map in rdc/include/rdc_libs/rdc_modules/rdc_rocp/RdcRocpBase.h
 // See metrics.xml in rocprofiler
-FLD_DESC_ENT(RDC_FI_PROF_MEAN_OCCUPANCY_PER_CU,        "Mean occupancy per CU",                 "MN_OCC_PER_CU",     false)
-FLD_DESC_ENT(RDC_FI_PROF_MEAN_OCCUPANCY_PER_ACTIVE_CU, "Mean occupancy per active CU",          "MN_OCC_PER_ACT_CU", false)
-FLD_DESC_ENT(RDC_FI_PROF_ACTIVE_CYCLES,                "Number of Active Cycles",               "ACTIVE_CYCLES",     false)
-FLD_DESC_ENT(RDC_FI_PROF_ACTIVE_WAVES,                 "Number of Active Waves",                "ACTIVE_WAVES",      false)
-FLD_DESC_ENT(RDC_FI_PROF_ELAPSED_CYCLES,               "Number of Elapsed Cycles over all SMs", "ELAPSED_CYCLES",    false)
+FLD_DESC_ENT(RDC_FI_PROF_OCCUPANCY_PERCENT,     "Percent of GPU occupancy",              "OCCUPANCY_PERCENT", false)
+FLD_DESC_ENT(RDC_FI_PROF_ACTIVE_CYCLES,         "Number of Active Cycles",               "ACTIVE_CYCLES",     false)
+FLD_DESC_ENT(RDC_FI_PROF_ACTIVE_WAVES,          "Number of Active Waves",                "ACTIVE_WAVES",      false)
+FLD_DESC_ENT(RDC_FI_PROF_ELAPSED_CYCLES,        "Number of Elapsed Cycles over all SMs", "ELAPSED_CYCLES",    false)
+FLD_DESC_ENT(RDC_FI_PROF_TENSOR_ACTIVE_PERCENT, "Percent of Active Pipe Tensors",        "TENSOR_PERCENT",    false)
+FLD_DESC_ENT(RDC_FI_PROF_GPU_UTIL_PERCENT,      "Percent of GPU Utilization",            "GPU_UTIL_PERCENT",  false)
 // metrics below are divided by time passed
-FLD_DESC_ENT(RDC_FI_PROF_EVAL_MEM_R_BW,                "Fetched from video memory kb / ms",     "MEM_R_BW",          false)
-FLD_DESC_ENT(RDC_FI_PROF_EVAL_MEM_W_BW,                "Written to video memory kb / ms",       "MEM_W_BW",          false)
-FLD_DESC_ENT(RDC_FI_PROF_EVAL_FLOPS_16,                "Number of fp16 OPS / ms",               "FLOPS_16",          false)
-FLD_DESC_ENT(RDC_FI_PROF_EVAL_FLOPS_32,                "Number of fp32 OPS / ms",               "FLOPS_32",          false)
-FLD_DESC_ENT(RDC_FI_PROF_EVAL_FLOPS_64,                "Number of fp64 OPS / ms",               "FLOPS_64",          false)
+FLD_DESC_ENT(RDC_FI_PROF_EVAL_MEM_R_BW,         "Fetched from video memory kb / ms",     "MEM_R_BW",          false)
+FLD_DESC_ENT(RDC_FI_PROF_EVAL_MEM_W_BW,         "Written to video memory kb / ms",       "MEM_W_BW",          false)
+FLD_DESC_ENT(RDC_FI_PROF_EVAL_FLOPS_16,         "Number of fp16 OPS / ms",               "FLOPS_16",          false)
+FLD_DESC_ENT(RDC_FI_PROF_EVAL_FLOPS_32,         "Number of fp32 OPS / ms",               "FLOPS_32",          false)
+FLD_DESC_ENT(RDC_FI_PROF_EVAL_FLOPS_64,         "Number of fp64 OPS / ms",               "FLOPS_64",          false)
 
 // Events
 FLD_DESC_ENT(RDC_EVNT_XGMI_0_NOP_TX,     "NOPs sent to neighbor 0",                     "XGMI_NOP_0",       false)
