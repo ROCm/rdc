@@ -118,7 +118,8 @@ RdcRocpBase::RdcRocpBase() {
       {RDC_FI_PROF_EVAL_MEM_W_BW, "WRITE_SIZE"},
       {RDC_FI_PROF_EVAL_FLOPS_16, "TOTAL_16_OPS"},
       {RDC_FI_PROF_EVAL_FLOPS_32, "TOTAL_32_OPS"},
-      {RDC_FI_PROF_EVAL_FLOPS_64, "FP64_ACTIVE"},
+      {RDC_FI_PROF_EVAL_FLOPS_64, "TOTAL_64_OPS"},
+      {RDC_FI_PROF_SM_ACTIVE, "VALUBusy"},
   };
 
   hsa_status_t status = hsa_init();
