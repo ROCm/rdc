@@ -224,6 +224,7 @@ rdc_status_t RdcCacheManagerImpl::rdc_update_job_stats(uint32_t gpu_index,
     uint64_t time_elapsed = value.ts - gpu_iter->second.energy_last_time;
     // Stored in cache as microseconds and microwats
     gpu_iter->second.energy_consumed += (time_elapsed * value.value.l_int) / (1000.0 * 1000000);
+    gpu_iter->second.energy_last_time = value.ts;
   }
   fsummary->second.max_value =
       std::max(fsummary->second.max_value, static_cast<int64_t>(value.value.l_int));
@@ -294,6 +295,7 @@ rdc_status_t RdcCacheManagerImpl::rdc_job_get_stats(const char jobId[64],
   summary_info.power_usage = {0, std::numeric_limits<uint64_t>::max(), 0, 0};
   summary_info.pcie_tx = {0, std::numeric_limits<uint64_t>::max(), 0, 0};
   summary_info.pcie_rx = {0, std::numeric_limits<uint64_t>::max(), 0, 0};
+  summary_info.pcie_total = {0, std::numeric_limits<uint64_t>::max(), 0, 0};
   summary_info.gpu_temperature = {0, std::numeric_limits<uint64_t>::max(), 0, 0};
   summary_info.memory_clock = {0, std::numeric_limits<uint64_t>::max(), 0, 0};
   summary_info.gpu_clock = {0, std::numeric_limits<uint64_t>::max(), 0, 0};
@@ -362,6 +364,8 @@ rdc_status_t RdcCacheManagerImpl::rdc_job_get_stats(const char jobId[64],
         set_summary(ite->second, gpu_info.pcie_tx, summary_info.pcie_tx, 1024 * 1024);
       } else if (ite->first == RDC_FI_PCIE_RX) {
         set_summary(ite->second, gpu_info.pcie_rx, summary_info.pcie_rx, 1024 * 1024);
+      } else if (ite->first == RDC_FI_PCIE_BANDWIDTH) {
+        set_summary(ite->second, gpu_info.pcie_total, summary_info.pcie_total, 1);
       }
     }
   }
