@@ -72,6 +72,7 @@ class RdcRocpBase {
     uint32_t index;
   } rdc_average_t;
   typedef std::pair<uint32_t, rdc_field_t> rdc_field_pair_t;
+  static const size_t buffer_length_k = 5;
   /**
    * @brief Tweak this to change for how long each metric is collected
    */

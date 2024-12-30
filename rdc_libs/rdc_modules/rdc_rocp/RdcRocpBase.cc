@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <numeric>
 #include <stdexcept>
 #include <vector>
 
@@ -80,7 +81,7 @@ double RdcRocpBase::run_profiler(uint32_t gpu_index, rdc_field_t field) {
     value += record.counter_value;  // Summing up values from all dimensions.
   }
 
-  return raw_value;
+  return value;
 }
 
 const char* RdcRocpBase::get_field_id_from_name(rdc_field_t field) {
