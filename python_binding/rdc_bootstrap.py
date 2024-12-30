@@ -160,6 +160,8 @@ class rdc_field_t(c_int):
      RDC_EVNT_NOTIF_PRE_RESET = 2002
      RDC_EVNT_NOTIF_POST_RESET = 2003
      RDC_EVNT_NOTIF_RING_HANG = 2004
+     RDC_HEALTH_POWER_THROTTLE_TIME = 3006
+     RDC_HEALTH_THERMAL_THROTTLE_TIME = 3007
 
 rdc_handle_t = c_void_p
 rdc_gpu_group_t = c_uint32
