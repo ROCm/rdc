@@ -766,6 +766,26 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
     case RDC_FI_PCIE_BANDWIDTH:
       read_gpu_metrics_uint64_t();
       break;
+    case RDC_HEALTH_POWER_THROTTLE_TIME: {//gpu_metrics 1.6 
+      amdsmi_violation_status_t violation_status;
+      ret = amdsmi_get_violation_status(processor_handle, &violation_status);
+      value->status = Smi2RdcError(ret);
+        if (AMDSMI_STATUS_SUCCESS == ret) {
+          value->type = INTEGER;
+          value->value.l_int = static_cast<int64_t>(violation_status.acc_ppt_pwr);
+        }
+      break;
+    }
+    case RDC_HEALTH_THERMAL_THROTTLE_TIME: {//gpu_metrics 1.6
+      amdsmi_violation_status_t violation_status;
+      ret = amdsmi_get_violation_status(processor_handle, &violation_status);
+      value->status = Smi2RdcError(ret);
+        if (AMDSMI_STATUS_SUCCESS == ret) {
+          value->type = INTEGER;
+          value->value.l_int = static_cast<int64_t>(violation_status.acc_prochot_thrm);
+        }
+      break;
+    }
 
     default:
       break;

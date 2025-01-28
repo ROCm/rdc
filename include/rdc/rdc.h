@@ -270,6 +270,7 @@ typedef enum {
   RDC_FI_PROF_EVAL_FLOPS_16,
   RDC_FI_PROF_EVAL_FLOPS_32,
   RDC_FI_PROF_EVAL_FLOPS_64,
+  RDC_FI_PROF_SM_ACTIVE = 812,
 
   /**
    * @brief Raw XGMI counter events
@@ -328,6 +329,8 @@ typedef enum {
   RDC_EVNT_NOTIF_RING_HANG,         //!< GPU ring hang just occurred
 
   RDC_EVNT_NOTIF_LAST = RDC_EVNT_NOTIF_RING_HANG,
+  RDC_HEALTH_POWER_THROTTLE_TIME = 3006,       //!< Power throttle status counter
+  RDC_HEALTH_THERMAL_THROTTLE_TIME = 3007,     //!< Total time in thermal throttle status (microseconds)
 } rdc_field_t;
 
 // even and odd numbers are used for correctable and uncorrectable errors
