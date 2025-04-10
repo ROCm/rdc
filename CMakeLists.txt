@@ -151,7 +151,7 @@ if(BUILD_STANDALONE AND GRPC_ROOT STREQUAL GRPC_ROOT_DEFAULT)
     Continuing without gRPC install")
 endif()
 
-find_package(amd_smi
+find_package(amd_smi 25.4.2
     NAMES amd_smi
     HINTS ${ROCM_DIR}/lib/cmake
     CONFIGURE REQUIRED)

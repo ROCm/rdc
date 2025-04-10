@@ -203,6 +203,7 @@ typedef enum {
   RDC_FI_GPU_MEMORY_MAX_BANDWIDTH,  //<! The Memory max bandwidth at current memory clock in
                                     // Mb/Second
   RDC_FI_GPU_MEMORY_CUR_BANDWIDTH,  //<! The Memory current bandwidth in Mb/Second
+  RDC_FI_GPU_BUSY_PERCENT,          //<! The GPU busy percentage
 
   /**
    * @brief GPU page related fields
