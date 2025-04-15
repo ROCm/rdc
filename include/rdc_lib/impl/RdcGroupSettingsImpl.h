@@ -28,7 +28,6 @@ THE SOFTWARE.
 #include <string>
 
 #include "rdc_lib/RdcGroupSettings.h"
-#include "rdc_lib/impl/RdcPartitionImpl.h"
 
 namespace amd {
 namespace rdc {
@@ -52,7 +51,7 @@ class RdcGroupSettingsImpl : public RdcGroupSettings {
   rdc_status_t rdc_group_field_get_all_ids(rdc_field_grp_t field_group_id_list[],
                                            uint32_t* count) override;
 
-  explicit RdcGroupSettingsImpl(const RdcPartitionPtr& partition);
+  RdcGroupSettingsImpl();
 
  private:
   std::map<rdc_gpu_group_t, rdc_group_info_t> gpu_group_;
@@ -61,7 +60,6 @@ class RdcGroupSettingsImpl : public RdcGroupSettings {
   uint32_t cur_field_group_id_ = 0;
   std::mutex group_mutex_;
   std::mutex field_group_mutex_;
-  RdcPartitionPtr partition_;
 };
 
 }  // namespace rdc

@@ -37,9 +37,7 @@ class RdciDiscoverySubSystem : public RdciSubSystem {
   bool show_help_;
   void show_help() const;
   bool is_list_;
-  bool is_partition_;
   void show_attributes();
-  void show_attributes_with_partitions();
   bool show_version_;
   void show_version();
 };

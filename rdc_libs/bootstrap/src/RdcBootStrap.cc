@@ -530,62 +530,6 @@ rdc_status_t rdc_link_status_get(rdc_handle_t p_rdc_handle, rdc_link_status_t* r
   if (!p_rdc_handle) {
     return RDC_ST_INVALID_HANDLER;
   }
-  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)->rdc_link_status_get(results);
-}
-
-rdc_status_t rdc_get_num_partition(rdc_handle_t p_rdc_handle, uint32_t index,
-                                   uint16_t* num_partition) {
-  if (!p_rdc_handle || !num_partition) {
-    return RDC_ST_INVALID_HANDLER;
-  }
   return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)
-    ->rdc_get_num_partition(index, num_partition);
-}
-
-rdc_status_t rdc_instance_profile_get(rdc_handle_t p_rdc_handle, uint32_t entity_index,
-  rdc_instance_resource_type_t resource_type,
-  rdc_resource_profile_t* profile) {
-  if (!p_rdc_handle || !profile) {
-    return RDC_ST_INVALID_HANDLER;
-  }
-  return static_cast<amd::rdc::RdcHandler*>(p_rdc_handle)
-    ->rdc_instance_profile_get(entity_index, resource_type, profile);
-}
-
-const char * get_rocm_path(const char * search_string) {
-  // set default rocm path in case lookup fails
-  static std::string rocm_path("/opt/rocm");
-  const char* rocm_path_env = getenv("ROCM_PATH");
-  if (rocm_path_env != nullptr) {
-    rocm_path = rocm_path_env;
-  }
-
-  std::ifstream file("/proc/self/maps");
-
-  if (!file.is_open()) {
-    RDC_LOG(RDC_DEBUG, "CANT OPEN FILE");
-    return rocm_path.c_str();
-  }
-
-  std::string line;
-  while (getline(file, line)) {
-    size_t index_end = line.find(search_string);
-    size_t index_start = index_end;
-    if (index_end == std::string::npos) {
-      // no library on this line
-      continue;
-    }
-    // walk index backwards until it reaches a space
-    while ((index_start > 0) && (line[index_start - 1] != ' ')) {
-      index_start--;
-    }
-    // extract library path, drop library name
-    rocm_path = line.substr(index_start, index_end - index_start);
-    // appending "../" should result in "/opt/rocm/lib/.." or similar
-    rocm_path += "..";
-    RDC_LOG(RDC_DEBUG, "FOUND SOMETHING!");
-    return rocm_path.c_str();
-  }
-
-  return rocm_path.c_str();
+      ->rdc_link_status_get(results);
 }
