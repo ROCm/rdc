@@ -36,7 +36,6 @@ THE SOFTWARE.
 #include "rdc_lib/impl/RdcMetricsUpdaterImpl.h"
 #include "rdc_lib/impl/RdcModuleMgrImpl.h"
 #include "rdc_lib/impl/RdcNotificationImpl.h"
-#include "rdc_lib/impl/RdcPartitionImpl.h"
 #include "rdc_lib/impl/RdcPolicyImpl.h"
 #include "rdc_lib/impl/RdcTopologyLinkImpl.h"
 #include "rdc_lib/impl/RdcWatchTableImpl.h"
@@ -77,8 +76,7 @@ namespace rdc {
 const uint32_t METIC_UPDATE_FREQUENCY = 1000;  // 1000 microseconds by default
 
 RdcEmbeddedHandler::RdcEmbeddedHandler(rdc_operation_mode_t mode)
-    : partition_(new RdcPartitionImpl()),
-      group_settings_(new RdcGroupSettingsImpl(partition_)),
+    : group_settings_(new RdcGroupSettingsImpl()),
       cache_mgr_(new RdcCacheManagerImpl()),
       metric_fetcher_(new RdcMetricFetcherImpl()),
       rdc_module_mgr_(new RdcModuleMgrImpl(metric_fetcher_)),
@@ -263,14 +261,9 @@ rdc_status_t RdcEmbeddedHandler::rdc_group_gpu_add(rdc_gpu_group_t group_id, uin
   if (status != RDC_ST_OK) {
     return status;
   }
-
-  rdc_entity_info_t info = rdc_get_info_from_entity_index(gpu_index);
-
-  uint32_t physical_gpu = info.device_index;
-
   bool is_gpu_exist = false;
   for (uint32_t i = 0; i < count; i++) {
-    if (gpu_index_list[i] == physical_gpu) {
+    if (gpu_index_list[i] == gpu_index) {
       is_gpu_exist = true;
       break;
     }
@@ -534,14 +527,5 @@ rdc_status_t RdcEmbeddedHandler::rdc_config_clear(rdc_gpu_group_t group_id) {
   return config_handler_->rdc_config_clear(group_id);
 }
 
-rdc_status_t RdcEmbeddedHandler::rdc_get_num_partition(uint32_t index, uint16_t* num_partition) {
-  return partition_->rdc_get_num_partition_impl(index, num_partition);
-}
-
-rdc_status_t RdcEmbeddedHandler::rdc_instance_profile_get(
-    uint32_t entity_index, rdc_instance_resource_type_t resource_type,
-    rdc_resource_profile_t* profile) {
-  return partition_->rdc_instance_profile_get_impl(entity_index, resource_type, profile);
-}
 }  // namespace rdc
 }  // namespace amd
