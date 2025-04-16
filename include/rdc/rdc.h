@@ -165,9 +165,14 @@ typedef enum { INTEGER = 0, DOUBLE, STRING, BLOB } rdc_field_type_t;
 typedef enum {
   RDC_FI_INVALID = 0,  //!< Invalid field value
   //!< @brief Identifier fields
-  RDC_FI_GPU_COUNT = 1,  //!< GPU count in the system
-  RDC_FI_DEV_NAME,       //!< Name of the device
-  RDC_FI_OAM_ID,         //!< OAM ID of the device
+  RDC_FI_GPU_COUNT = 1,            //!< GPU count in the system
+  RDC_FI_DEV_NAME,                 //!< Name of the device
+  RDC_FI_OAM_ID,                   //!< OAM ID of the device
+  RDC_FI_DEV_ID,                   //!< Device ID
+  RDC_FI_REV_ID,                   //!<
+  RDC_FI_TARGET_GRAPHICS_VERSION,  //!< Target graphics version
+  RDC_FI_NUM_OF_COMPUTE_UNITS,     //!< Number of compute units
+  RDC_FI_UUID,                     //!< Device UUID
 
   /**
    * @brief Frequency related fields
@@ -338,6 +343,7 @@ typedef enum {
   RDC_FI_PROF_CPF_CPF_TCIU_IDLE,
   RDC_FI_PROF_CPF_CPF_TCIU_STALL,
   RDC_FI_PROF_SIMD_UTILIZATION,
+  RDC_FI_PROF_UUID,
 
   /**
    * @brief Raw XGMI counter events

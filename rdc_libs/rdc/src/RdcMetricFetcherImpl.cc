@@ -846,7 +846,12 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
         value->value.l_int = num_pages;
       }
       break;
-    case RDC_FI_OAM_ID: {
+    case RDC_FI_OAM_ID:
+    case RDC_FI_DEV_ID:
+    case RDC_FI_REV_ID:
+    case RDC_FI_TARGET_GRAPHICS_VERSION:
+    case RDC_FI_NUM_OF_COMPUTE_UNITS:
+    case RDC_FI_UUID: {
       amdsmi_asic_info_t asic_info;
       value->status = amdsmi_get_gpu_asic_info(processor_handle, &asic_info);
       value->type = INTEGER;
@@ -857,6 +862,29 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
         } else {
           value->value.l_int = asic_info.oam_id;
         }
+      } else if (field_id == RDC_FI_DEV_ID) {
+        value->value.l_int = asic_info.device_id;
+      } else if (field_id == RDC_FI_REV_ID) {
+        value->value.l_int = asic_info.rev_id;
+      } else if (field_id == RDC_FI_TARGET_GRAPHICS_VERSION) {
+        if (asic_info.target_graphics_version == 0xFFFFFFFFFFFFFFFF) {
+          value->status = AMDSMI_STATUS_NOT_SUPPORTED;
+        } else {
+          value->value.l_int = asic_info.target_graphics_version;
+        }
+      } else if (field_id == RDC_FI_NUM_OF_COMPUTE_UNITS) {
+        if (asic_info.num_of_compute_units == 0xFFFFFFFF) {
+          value->status = AMDSMI_STATUS_NOT_SUPPORTED;
+        } else {
+          value->value.l_int = asic_info.num_of_compute_units;
+        }
+      } else if (field_id == RDC_FI_UUID) {
+        value->type = STRING;
+        memcpy(value->value.str, asic_info.asic_serial, sizeof(asic_info.asic_serial));
+      } else {
+        // this should never happen as all fields are handled above
+        RDC_LOG(RDC_ERROR, "Unexpected field id: " << field_id);
+        value->status = AMDSMI_STATUS_INPUT_OUT_OF_BOUNDS;
       }
       break;
     }
