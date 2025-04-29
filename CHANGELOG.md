@@ -4,10 +4,18 @@ Full documentation for RDC is available at [ROCm DataCenter Tool User Guide](htt
 
 ## RDC for ROCm 6.4.1
 
-- Added support for GPU Partitions
-- Update rdc_field to align with rdc_bootstrap for current metrics
-- Added `RDC_FI_GPU_BUSY_PERCENT` metric
-- Fix [rocprofiler](https://github.com/ROCm/rocprofiler) eval metrics and memory leaks
+### Added
+
+- Support for GPU partitions.
+- `RDC_FI_GPU_BUSY_PERCENT` metric.
+
+### Changed
+
+- Update `rdc_field` to align with `rdc_bootstrap` for current metrics.
+
+### Resolved issues
+
+- Fixed [rocprofiler](https://github.com/ROCm/rocprofiler) eval metrics and memory leaks.
 
 ## RDC for ROCm 6.3.0
 
