@@ -11,7 +11,7 @@ Full documentation for RDC is available at [ROCm DataCenter Tool User Guide](htt
 
 ### Changed
 
-- Update `rdc_field` to align with `rdc_bootstrap` for current metrics.
+- Updated `rdc_field` to align with `rdc_bootstrap` for current metrics.
 
 ### Resolved issues
 
