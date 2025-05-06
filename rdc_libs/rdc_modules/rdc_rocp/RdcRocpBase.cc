@@ -122,6 +122,8 @@ RdcRocpBase::RdcRocpBase() {
       {RDC_FI_PROF_OCC_PER_ACTIVE_CU, "MeanOccupancyPerActiveCU"},
       {RDC_FI_PROF_OCC_ELAPSED,
        "GRBM_GUI_ACTIVE"},  // this metric is derived from OCC_PER_ACTIVE_CU and ACTIVE_CYCLES
+      {RDC_FI_PROF_SIMD_UTILIZATION, "SIMD_UTILIZATION"},
+
   };
 
   hsa_status_t status = hsa_init();
