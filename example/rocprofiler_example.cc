@@ -22,10 +22,8 @@ THE SOFTWARE.
 
 #include <unistd.h>
 
-#include <cstddef>
 #include <iomanip>
 #include <iostream>
-#include <string_view>
 #include <vector>
 
 #include "rdc/rdc.h"
@@ -33,7 +31,7 @@ THE SOFTWARE.
 rdc_handle_t rdc_handle;
 rdc_status_t result;
 
-constexpr std::string_view value_to_string(rdc_field_value value) {
+const std::string value_to_string(rdc_field_value value) {
   switch (value.type) {
     case INTEGER:
       return std::to_string(value.value.l_int);
@@ -128,8 +126,7 @@ int run() {
   field_ids.push_back(RDC_FI_GPU_MEMORY_USAGE);
   field_ids.push_back(RDC_FI_POWER_USAGE);
   // profiler metrics
-  field_ids.push_back(RDC_FI_PROF_MEAN_OCC_PER_CU);
-  field_ids.push_back(RDC_FI_PROF_MEAN_OCC_PER_ACTIVE_CU);
+  field_ids.push_back(RDC_FI_PROF_OCCUPANCY_PERCENT);
   field_ids.push_back(RDC_FI_PROF_ACTIVE_CYCLES);
   field_ids.push_back(RDC_FI_PROF_ACTIVE_WAVES);
   field_ids.push_back(RDC_FI_PROF_ELAPSED_CYCLES);

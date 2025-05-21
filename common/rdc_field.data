@@ -20,6 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+// clang-format off
+
 // Description Fields:
 //   Arg #   Type              Meaning
 //  -------------------------------------------------
@@ -54,7 +56,7 @@ FLD_DESC_ENT(RDC_FI_GPU_MM_DEC_UTIL,     "Mutilmedia decoder busy percentage",  
 FLD_DESC_ENT(RDC_FI_GPU_MEMORY_ACTIVITY, "Memory busy percentage",                      "GPU_MEM_UTIL",     true)
 FLD_DESC_ENT(RDC_FI_GPU_MEMORY_MAX_BANDWIDTH,       "Memory max bandwidth",             "GPU_MEM_MAX_BANDWIDTH",   true)
 FLD_DESC_ENT(RDC_FI_GPU_MEMORY_CUR_BANDWIDTH,       "Memory current bandwidth",         "GPU_MEM_CUR_BANDWIDTH",   true)
-
+FLD_DESC_ENT(RDC_FI_GPU_BUSY_PERCENT,    "GPU busy percentage",                         "GPU_BUSY_PERCENT", true)
 FLD_DESC_ENT(RDC_FI_GPU_PAGE_RETRIED,    "Retried page of the GPU instance",            "GPU_PAGE_RETRIED", true)
 
 // ECC totals
@@ -110,7 +112,6 @@ FLD_DESC_ENT(RDC_FI_XGMI_4_READ_KB,      "XGMI4 accumulated data read size (KB)"
 FLD_DESC_ENT(RDC_FI_XGMI_5_READ_KB,      "XGMI5 accumulated data read size (KB)",       "XGMI_5_READ",      true)
 FLD_DESC_ENT(RDC_FI_XGMI_6_READ_KB,      "XGMI6 accumulated data read size (KB)",       "XGMI_6_READ",      true)
 FLD_DESC_ENT(RDC_FI_XGMI_7_READ_KB,      "XGMI7 accumulated data read size (KB)",       "XGMI_7_READ",      true)
-FLD_DESC_ENT(RDC_FI_XGMI_TOTAL_READ_KB,    "XGMI accumlated data read size across all lanes (KB)", "XGMI_TOTAL_READ", true)
 
 FLD_DESC_ENT(RDC_FI_XGMI_0_WRITE_KB,     "XGMI0 accumulated data write size (KB)",      "XGMI_0_WRITE",     true)
 FLD_DESC_ENT(RDC_FI_XGMI_1_WRITE_KB,     "XGMI1 accumulated data write size (KB)",      "XGMI_1_WRITE",     true)
@@ -120,6 +121,7 @@ FLD_DESC_ENT(RDC_FI_XGMI_4_WRITE_KB,     "XGMI4 accumulated data write size (KB)
 FLD_DESC_ENT(RDC_FI_XGMI_5_WRITE_KB,     "XGMI5 accumulated data write size (KB)",      "XGMI_5_WRITE",     true)
 FLD_DESC_ENT(RDC_FI_XGMI_6_WRITE_KB,     "XGMI6 accumulated data write size (KB)",      "XGMI_6_WRITE",     true)
 FLD_DESC_ENT(RDC_FI_XGMI_7_WRITE_KB,     "XGMI7 accumulated data write size (KB)",      "XGMI_7_WRITE",     true)
+FLD_DESC_ENT(RDC_FI_XGMI_TOTAL_READ_KB,    "XGMI accumlated data read size across all lanes (KB)", "XGMI_TOTAL_READ", true)
 FLD_DESC_ENT(RDC_FI_XGMI_TOTAL_WRITE_KB,    "XGMI accumlated data write size across all lanes (KB)", "XGMI_TOTAL_WRITE", true)
 
 
@@ -148,6 +150,7 @@ FLD_DESC_ENT(RDC_FI_PROF_OCC_ELAPSED,           "Mean occ per active cu over ela
 FLD_DESC_ENT(RDC_FI_PROF_EVAL_FLOPS_16_PERCENT, "Number of fp16 OPS percent of max",     "FLOPS_16_PERCENT",  false)
 FLD_DESC_ENT(RDC_FI_PROF_EVAL_FLOPS_32_PERCENT, "Number of fp32 OPS percent of max",     "FLOPS_32_PERCENT",  false)
 FLD_DESC_ENT(RDC_FI_PROF_EVAL_FLOPS_64_PERCENT, "Number of fp64 OPS percent of max",     "FLOPS_64_PERCENT",  false)
+FLD_DESC_ENT(RDC_FI_PROF_SIMD_UTILIZATION, "Fraction of time the SIMDs are being utilized", "SIMD_UTILIZATION", false)
 
 // Events
 FLD_DESC_ENT(RDC_EVNT_XGMI_0_NOP_TX,     "NOPs sent to neighbor 0",                     "XGMI_NOP_0",       false)
