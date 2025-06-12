@@ -35,24 +35,28 @@ THE SOFTWARE.
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <iomanip>
 #include <stdexcept>
 #include <vector>
 
 // #include "hsa.h"
+#include "amd_smi/amdsmi.h"
 #include "rdc/rdc.h"
 #include "rdc_lib/RdcLogger.h"
 #include "rdc_lib/RdcTelemetryLibInterface.h"
+#include "rdc_lib/impl/SmiUtils.h"
+#include "rdc_lib/rdc_common.h"
 #include "rdc_modules/rdc_rocp/RdcRocpCounterSampler.h"
 
 namespace amd {
 namespace rdc {
 
-double RdcRocpBase::run_profiler(uint32_t gpu_index, rdc_field_t field) {
+double RdcRocpBase::run_profiler(uint32_t agent_index, rdc_field_t field) {
   thread_local std::vector<rocprofiler_record_counter_t> records;
 
-  auto counter_sampler = CounterSampler::get_samplers()[gpu_index];
+  auto counter_sampler = CounterSampler::get_samplers()[agent_index];
   if (!counter_sampler) {
-    RDC_LOG(RDC_ERROR, "Error: Counter sampler not found for GPU index " << gpu_index);
+    RDC_LOG(RDC_ERROR, "Error: Counter sampler not found for GPU index " << agent_index);
     return RDC_ST_BAD_PARAMETER;
   }
 
@@ -97,6 +101,105 @@ const std::vector<rdc_field_t> RdcRocpBase::get_field_ids() {
   return field_ids;
 }
 
+rocprofiler_uuid_t asic_serial_to_uuid(const char* asic_serial) {
+  rocprofiler_uuid_t uuid = {0};
+  // have to cast to stoull as a workaround for amdsmi ignoring leading zeroes
+  uuid.value = std::stoull(asic_serial, nullptr, 16);
+  return uuid;
+}
+
+std::string uuid_to_string(const uint64_t uuid) {
+  std::ostringstream oss;
+  oss << "0x" << std::hex << std::setw(16) << std::setfill('0') << uuid;
+  return oss.str();
+}
+
+std::string uuid_to_string(const rocprofiler_uuid_t& uuid) { return uuid_to_string(uuid.value); }
+
+rdc_status_t RdcRocpBase::map_entity_to_profiler() {
+  // std::map<uint32_t, uint32_t> entity_to_index_map;
+  // kfd_id_t is only used inside this function
+  typedef uint64_t kfd_id_t;
+  std::map<uint32_t, kfd_id_t> prof_kfd_map;
+
+  // populate profiler map
+  for (uint32_t prof_gpu_index = 0; prof_gpu_index < agents.size(); prof_gpu_index++) {
+    prof_kfd_map.insert({prof_gpu_index, agents[prof_gpu_index].gpu_id});
+  }
+
+  std::vector<amdsmi_socket_handle> sockets;
+  auto amdsmi_status = get_socket_handles(sockets);
+  if (amdsmi_status != AMDSMI_STATUS_SUCCESS) {
+    RDC_LOG(RDC_ERROR, "Failed to get socket handles: " << amdsmi_status);
+    return Smi2RdcError(amdsmi_status);
+  }
+
+  for (int socket_index = 0; socket_index < sockets.size(); socket_index++) {
+    auto* socket = sockets[socket_index];
+    std::vector<amdsmi_processor_handle> processors;
+    amdsmi_status = get_processor_handles(socket, processors);
+    if (amdsmi_status != AMDSMI_STATUS_SUCCESS) {
+      RDC_LOG(RDC_ERROR, "Failed to get processor handles for socket " << socket_index << ": "
+                                                                       << amdsmi_status);
+      return Smi2RdcError(amdsmi_status);
+    }
+
+    for (int processor_index = 0; processor_index < processors.size(); processor_index++) {
+      auto* processor = processors[processor_index];
+      processor_type_t processor_type = AMDSMI_PROCESSOR_TYPE_UNKNOWN;
+      amdsmi_status = amdsmi_get_processor_type(processor, &processor_type);
+      if (amdsmi_status != AMDSMI_STATUS_SUCCESS) {
+        RDC_LOG(RDC_ERROR, "Failed to get processor type for processor "
+                               << processor_index << " on socket " << socket_index << ": "
+                               << amdsmi_status);
+        return Smi2RdcError(amdsmi_status);
+      }
+      if (processor_type != AMDSMI_PROCESSOR_TYPE_AMD_GPU) {
+        continue;
+      }
+
+      amdsmi_kfd_info_t kfd_info;
+      amdsmi_status = amdsmi_get_gpu_kfd_info(processor, &kfd_info);
+      if (amdsmi_status != AMDSMI_STATUS_SUCCESS) {
+        RDC_LOG(RDC_ERROR, "Failed to get KFD info for processor "
+                               << processor_index << " on socket " << socket_index << ": "
+                               << amdsmi_status);
+        return Smi2RdcError(amdsmi_status);
+      }
+
+      rdc_entity_info_t entity_info = {
+          .device_index = static_cast<uint32_t>(socket_index),
+          .instance_index = static_cast<uint32_t>(processor_index),
+          .entity_role = RDC_DEVICE_ROLE_PHYSICAL,
+          .device_type = RDC_DEVICE_TYPE_GPU,
+      };
+
+      uint32_t entity_index = rdc_get_entity_index_from_info(entity_info);
+
+      for (const auto& [prof_index, prof_id] : prof_kfd_map) {
+        if (std::memcmp(&kfd_info.kfd_id, &prof_id, sizeof(kfd_id_t)) == 0) {
+          // match found
+          // clang-format off
+          RDC_LOG(RDC_DEBUG, "SMI[" << entity_index << "] <-> Profiler[" << prof_index << "] = KFD_ID[" << prof_id << "]");
+          // clang-format on
+          if (entity_info.entity_role == RDC_DEVICE_ROLE_PHYSICAL) {
+            entity_index = rdc_get_entity_index_from_info(entity_info);
+            entity_to_prof_map.insert({entity_index, prof_index});
+          }
+          if (processors.size() > 1) {
+            // if there are multiple processors, also add entity with partition instance type
+            entity_info.entity_role = RDC_DEVICE_ROLE_PARTITION_INSTANCE;
+            entity_index = rdc_get_entity_index_from_info(entity_info);
+            entity_to_prof_map.insert({entity_index, prof_index});
+          }
+          break;
+        }
+      }
+    }
+  }
+  return RDC_ST_OK;
+}
+
 RdcRocpBase::RdcRocpBase() {
   // all fields
   static const std::map<rdc_field_t, const char*> temp_field_map_k = {
@@ -120,10 +223,46 @@ RdcRocpBase::RdcRocpBase() {
       {RDC_FI_PROF_VALU_PIPE_ISSUE_UTIL, "ValuPipeIssueUtil"},
       {RDC_FI_PROF_SM_ACTIVE, "VALUBusy"},
       {RDC_FI_PROF_OCC_PER_ACTIVE_CU, "MeanOccupancyPerActiveCU"},
-      {RDC_FI_PROF_OCC_ELAPSED,
-       "GRBM_GUI_ACTIVE"},  // this metric is derived from OCC_PER_ACTIVE_CU and ACTIVE_CYCLES
+      {RDC_FI_PROF_OCC_ELAPSED, "GRBM_GUI_ACTIVE"},  // this metric is derived from
+                                                     // OCC_PER_ACTIVE_CU and ACTIVE_CYCLES
+      {RDC_FI_PROF_CPC_CPC_STAT_BUSY, "CPC_CPC_STAT_BUSY"},
+      {RDC_FI_PROF_CPC_CPC_STAT_IDLE, "CPC_CPC_STAT_IDLE"},
+      {RDC_FI_PROF_CPC_CPC_STAT_STALL, "CPC_CPC_STAT_STALL"},
+      {RDC_FI_PROF_CPC_CPC_TCIU_BUSY, "CPC_CPC_TCIU_BUSY"},
+      {RDC_FI_PROF_CPC_CPC_TCIU_IDLE, "CPC_CPC_TCIU_IDLE"},
+      {RDC_FI_PROF_CPC_CPC_UTCL2IU_BUSY, "CPC_CPC_UTCL2IU_BUSY"},
+      {RDC_FI_PROF_CPC_CPC_UTCL2IU_IDLE, "CPC_CPC_UTCL2IU_IDLE"},
+      {RDC_FI_PROF_CPC_CPC_UTCL2IU_STALL, "CPC_CPC_UTCL2IU_STALL"},
+      {RDC_FI_PROF_CPC_ME1_BUSY_FOR_PACKET_DECODE, "CPC_ME1_BUSY_FOR_PACKET_DECODE"},
+      {RDC_FI_PROF_CPC_ME1_DC0_SPI_BUSY, "CPC_ME1_DC0_SPI_BUSY"},
+      {RDC_FI_PROF_CPC_UTCL1_STALL_ON_TRANSLATION, "CPC_UTCL1_STALL_ON_TRANSLATION"},
+      {RDC_FI_PROF_CPC_ALWAYS_COUNT, "CPC_ALWAYS_COUNT"},
+      {RDC_FI_PROF_CPC_ADC_VALID_CHUNK_NOT_AVAIL, "CPC_ADC_VALID_CHUNK_NOT_AVAIL"},
+      {RDC_FI_PROF_CPC_ADC_DISPATCH_ALLOC_DONE, "CPC_ADC_DISPATCH_ALLOC_DONE"},
+      {RDC_FI_PROF_CPC_ADC_VALID_CHUNK_END, "CPC_ADC_VALID_CHUNK_END"},
+      {RDC_FI_PROF_CPC_SYNC_FIFO_FULL_LEVEL, "CPC_SYNC_FIFO_FULL_LEVEL"},
+      {RDC_FI_PROF_CPC_SYNC_FIFO_FULL, "CPC_SYNC_FIFO_FULL"},
+      {RDC_FI_PROF_CPC_GD_BUSY, "CPC_GD_BUSY"},
+      {RDC_FI_PROF_CPC_TG_SEND, "CPC_TG_SEND"},
+      {RDC_FI_PROF_CPC_WALK_NEXT_CHUNK, "CPC_WALK_NEXT_CHUNK"},
+      {RDC_FI_PROF_CPC_STALLED_BY_SE0_SPI, "CPC_STALLED_BY_SE0_SPI"},
+      {RDC_FI_PROF_CPC_STALLED_BY_SE1_SPI, "CPC_STALLED_BY_SE1_SPI"},
+      {RDC_FI_PROF_CPC_STALLED_BY_SE2_SPI, "CPC_STALLED_BY_SE2_SPI"},
+      {RDC_FI_PROF_CPC_STALLED_BY_SE3_SPI, "CPC_STALLED_BY_SE3_SPI"},
+      {RDC_FI_PROF_CPC_LTE_ALL, "CPC_LTE_ALL"},
+      {RDC_FI_PROF_CPC_SYNC_WRREQ_FIFO_BUSY, "CPC_SYNC_WRREQ_FIFO_BUSY"},
+      {RDC_FI_PROF_CPC_CANE_BUSY, "CPC_CANE_BUSY"},
+      {RDC_FI_PROF_CPC_CANE_STALL, "CPC_CANE_STALL"},
+      {RDC_FI_PROF_CPF_CMP_UTCL1_STALL_ON_TRANSLATION, "CPF_CMP_UTCL1_STALL_ON_TRANSLATION"},
+      {RDC_FI_PROF_CPF_CPF_STAT_BUSY, "CPF_CPF_STAT_BUSY"},
+      {RDC_FI_PROF_CPF_CPF_STAT_IDLE, "CPF_CPF_STAT_IDLE"},
+      {RDC_FI_PROF_CPF_CPF_STAT_STALL, "CPF_CPF_STAT_STALL"},
+      {RDC_FI_PROF_CPF_CPF_TCIU_BUSY, "CPF_CPF_TCIU_BUSY"},
+      {RDC_FI_PROF_CPF_CPF_TCIU_IDLE, "CPF_CPF_TCIU_IDLE"},
+      {RDC_FI_PROF_CPF_CPF_TCIU_STALL, "CPF_CPF_TCIU_STALL"},
       {RDC_FI_PROF_SIMD_UTILIZATION, "SIMD_UTILIZATION"},
-
+      {RDC_FI_PROF_UUID, "SQ_WAVES"},    // dummy value,
+      {RDC_FI_PROF_KFD_ID, "SQ_WAVES"},  // dummy value,
   };
 
   hsa_status_t status = hsa_init();
@@ -148,29 +287,31 @@ RdcRocpBase::RdcRocpBase() {
   RDC_LOG(RDC_DEBUG, "Agent count: " << agents.size());
   samplers = CounterSampler::get_samplers();
 
+  map_entity_to_profiler();
+
+  // find intersection of supported and requested fields
+  uint32_t agent_index = 0;
+  auto& cs = *samplers[agent_index];
+  RDC_LOG(RDC_DEBUG, "agent_index[" << agent_index << "] location_id["
+                                    << agents[agent_index].location_id << "]");
+
+  for (auto& [str, id] : CounterSampler::get_supported_counters(cs.get_agent())) {
+    checked_fields.emplace_back(str);
+  }
+
+  for (const auto& [k, v] : temp_field_map_k) {
+    auto found = std::find(checked_fields.begin(), checked_fields.end(), v);
+    if (found != checked_fields.end()) {
+      field_to_metric.insert({k, v});
+    }
+  }
+
   // populate fields
   for (const auto& [k, v] : temp_field_map_k) {
     all_fields.emplace_back(v);
   }
 
-  // find intersection of supported and requested fields
-  for (uint32_t gpu_index = 0; gpu_index < agents.size(); gpu_index++) {
-    auto& cs = *samplers[gpu_index];
-    RDC_LOG(RDC_DEBUG,
-            "gpu_index[" << gpu_index << "] = node_id[" << agents[gpu_index].node_id << "]");
-    for (auto& [str, id] : CounterSampler::get_supported_counters(cs.get_agent())) {
-      checked_fields.emplace_back(str);
-    }
-
-    for (const auto& [k, v] : temp_field_map_k) {
-      auto found = std::find(checked_fields.begin(), checked_fields.end(), v);
-      if (found != checked_fields.end()) {
-        field_to_metric.insert({k, v});
-      }
-    }
-  }
-
-  RDC_LOG(RDC_DEBUG, "Rocprofiler supports " << field_to_metric.size() << " fields");
+  RDC_LOG(RDC_DEBUG, "Profiler supports " << field_to_metric.size() << " fields");
 }
 
 RdcRocpBase::~RdcRocpBase() {
@@ -181,26 +322,32 @@ RdcRocpBase::~RdcRocpBase() {
   assert(status == HSA_STATUS_ERROR_NOT_INITIALIZED);
 }
 
-rdc_status_t RdcRocpBase::rocp_lookup(rdc_gpu_field_t gpu_field, double* value) {
-  const auto& gpu_index = gpu_field.gpu_index;
+rdc_status_t RdcRocpBase::rocp_lookup(rdc_gpu_field_t gpu_field, rdc_field_value_data* data,
+                                      rdc_field_type_t* type) {
+  // default type
+  *type = DOUBLE;
+
+  // convert from entity to flat index
+  uint32_t agent_index = entity_to_prof_map[gpu_field.gpu_index];
   const auto& field = gpu_field.field_id;
 
-  if (value == nullptr) {
+  if (data == nullptr) {
     return RDC_ST_BAD_PARAMETER;
   }
 
   const bool is_eval_field = (eval_fields.find(field) != eval_fields.end());
 
   const auto start_time = std::chrono::high_resolution_clock::now();
-  const double read_value = run_profiler(gpu_index, field);
+  // direct read from rocprofiler
+  const double read_dbl = run_profiler(agent_index, field);
   const auto stop_time = std::chrono::high_resolution_clock::now();
   const double elapsed = std::chrono::duration<double, std::milli>(stop_time - start_time).count();
-  double divided_value = NAN;
-  double final_value = NAN;
+  // divide by elapsed time if needed
+  double divided_dbl = NAN;
 
   if (is_eval_field) {
     if (elapsed != 0.0) {
-      divided_value = read_value / (elapsed / 1000.0);
+      divided_dbl = read_dbl / (elapsed / 1000.0);
     } else {
       RDC_LOG(RDC_ERROR, "Error: Elapsed time is zero. Cannot divide by zero.");
       return RDC_ST_BAD_PARAMETER;
@@ -212,16 +359,16 @@ rdc_status_t RdcRocpBase::rocp_lookup(rdc_gpu_field_t gpu_field, double* value) 
       // RDC_FI_PROF_GPU_UTIL_PERCENT is mapped to GPU_UTIL
       // GPU_UTIL metric is available on more GPUs than ENGINE_ACTIVE.
       // ENGINE_ACTIVE = GPU_UTIL/100, so do the math ourselves
-      final_value = read_value / 100.0F;
+      data->dbl = read_dbl / 100.0F;
       break;
     case RDC_FI_PROF_OCC_ELAPSED: {
       // RDC_FI_PROF_OCC_ELAPSED is mapped to GRBM_GUI_ACTIVE, the read happens earlier in this
       // function
-      const double active_cycles_val = read_value;
+      const double active_cycles_val = read_dbl;
       if (active_cycles_val != 0.0) {
-        // read second value from rocprofiler
-        const double occupancy_val = run_profiler(gpu_index, RDC_FI_PROF_OCC_PER_ACTIVE_CU);
-        final_value = occupancy_val / active_cycles_val;
+        // read second value from profiler
+        const double occupancy_val = run_profiler(agent_index, RDC_FI_PROF_OCC_PER_ACTIVE_CU);
+        data->dbl = occupancy_val / active_cycles_val;
       } else {
         return RDC_ST_BAD_PARAMETER;
       }
@@ -232,16 +379,14 @@ rdc_status_t RdcRocpBase::rocp_lookup(rdc_gpu_field_t gpu_field, double* value) 
         return RDC_ST_BAD_PARAMETER;
       }
       // 1024, 2048, and 256 are taken from "INTRODUCING AMD CDNA 3 ARCHITECTURE" white paper
-      const std::string target_version = agents[gpu_index].name;
+      const std::string target_version = agents[agent_index].name;
       // TODO: Design a lookup table for other GPUs
       const bool isMI200 = (target_version.find("gfx90a") != std::string::npos);
       // FLOPS/clock/CU
       if (isMI200) {
-        final_value =
-            divided_value / (1024.0F / static_cast<double>(agents[gpu_index].simd_per_cu));
+        data->dbl = divided_dbl / (1024.0F / static_cast<double>(agents[agent_index].simd_per_cu));
       } else {  // Assume mi300
-        final_value =
-            divided_value / (2048.0F / static_cast<double>(agents[gpu_index].simd_per_cu));
+        data->dbl = divided_dbl / (2048.0F / static_cast<double>(agents[agent_index].simd_per_cu));
       }
     } break;
     case RDC_FI_PROF_EVAL_FLOPS_32_PERCENT:
@@ -251,23 +396,31 @@ rdc_status_t RdcRocpBase::rocp_lookup(rdc_gpu_field_t gpu_field, double* value) 
         return RDC_ST_BAD_PARAMETER;
       }
       // FLOPS/clock/CU
-      final_value = divided_value / (256.0F / static_cast<double>(agents[gpu_index].simd_per_cu));
+      data->dbl = divided_dbl / (256.0F / static_cast<double>(agents[agent_index].simd_per_cu));
       break;
+    case RDC_FI_PROF_UUID: {
+      // do not care what RDC_FI_PROF_UUID is mapped to. read value from agents
+      *type = STRING;
+      std::string uuid_str = uuid_to_string(agents[agent_index].uuid);
+      strncpy_with_null(data->str, uuid_str.c_str(), uuid_str.length());
+      break;
+    }
+    case RDC_FI_PROF_KFD_ID: {
+      // do not care what RDC_FI_PROF_UUID is mapped to. read value from agents
+      *type = INTEGER;
+      data->l_int = agents[agent_index].gpu_id;
+      break;
+    }
     default:
+      // only support default fallback for doubles
+      assert(*type == DOUBLE);
       if (is_eval_field) {
-        final_value = divided_value;
+        data->dbl = divided_dbl;
       } else {
-        final_value = read_value;
+        data->dbl = read_dbl;
       }
       break;
   }
-
-  if (final_value == NAN) {
-    RDC_LOG(RDC_ERROR, "Error: Final value is NaN.");
-    return RDC_ST_BAD_PARAMETER;
-  }
-
-  *value = final_value;
 
   return RDC_ST_OK;
 }

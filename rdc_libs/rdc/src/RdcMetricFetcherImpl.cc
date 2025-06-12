@@ -26,6 +26,8 @@ THE SOFTWARE.
 #include <sys/time.h>
 
 #include <chrono>  //NOLINT
+#include <cstddef>
+#include <cstdint>
 #include <set>
 #include <vector>
 
@@ -86,7 +88,7 @@ RdcMetricFetcherImpl::~RdcMetricFetcherImpl() {
 }
 
 uint64_t RdcMetricFetcherImpl::now() {
-  struct timeval tv;
+  struct timeval tv {};
   gettimeofday(&tv, NULL);
   return static_cast<uint64_t>(tv.tv_sec) * 1000 + tv.tv_usec / 1000;
 }
@@ -98,6 +100,7 @@ void RdcMetricFetcherImpl::get_ecc(uint32_t gpu_index, rdc_field_t field_id,
 
   amdsmi_processor_handle processor_handle;
   err = get_processor_handle_from_id(gpu_index, &processor_handle);
+  assert(err == AMDSMI_STATUS_SUCCESS);
 
   // because RDC already had an established order that is different from amd-smi : map blocks to
   // fields manually
@@ -521,9 +524,9 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
       case RDC_FI_GPU_CLOCK: {
         const uint16_t* clock_array = gpu_metrics.current_gfxclks;
         std::vector<uint16_t> valid_clocks;
-        valid_clocks.reserve(8);
+        valid_clocks.reserve(AMDSMI_MAX_NUM_GFX_CLKS);
 
-        for (uint32_t i = 0; i < 8; i++) {
+        for (uint32_t i = 0; i < AMDSMI_MAX_NUM_GFX_CLKS; i++) {
           uint16_t clk = clock_array[i];
           if (clk != 0 && clk != 0xFFFF) {
             valid_clocks.push_back(clk);
@@ -540,7 +543,7 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
         }
 
         if (vc == num_partitions) {
-          value->value.l_int = clock_array[info.instance_index] * 1000000;
+          value->value.l_int = static_cast<int64_t>(clock_array[info.instance_index]) * 1000000;
           value->type = INTEGER;
           value->status = RDC_ST_OK;
           return RDC_ST_OK;
@@ -620,10 +623,12 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
       }
 
       default:
-        // All other fields => N/A for partition
-        RDC_LOG(RDC_DEBUG, "Partition " << gpu_index << ": Field " << field_id_string(field_id)
-                                        << " not supported => NO_DATA.");
-        return RDC_ST_NO_DATA;
+        // for now we must let other plugins return valid data for partition metrics
+
+        // TODO: All other fields => N/A for partition IN AMDSMI
+        // RDC_LOG(RDC_DEBUG, "Partition " << gpu_index << ": Field " << field_id_string(field_id)
+        //                                 << " not supported => NO_DATA.");
+        break;
     }
   }  // end if partition
 
@@ -748,6 +753,17 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
         value->value.l_int = static_cast<int64_t>(socket_count);
       }
     } break;
+    case RDC_FI_GPU_PARTITION_COUNT: {
+      uint32_t partition_count = 0;
+      amdsmi_gpu_metrics_t metrics;
+      memset(&metrics, 0, sizeof(metrics));
+      value->status = get_metrics_info(processor_handle, &metrics);
+      partition_count = metrics.num_partition;
+      value->type = INTEGER;
+      if (value->status == AMDSMI_STATUS_SUCCESS) {
+        value->value.l_int = static_cast<int64_t>(partition_count);
+      }
+    } break;
     case RDC_FI_POWER_USAGE: {
       amdsmi_power_info_t power_info = {};
 // Handle API breaking change in amdsmi commit dc4a16da6fb45d581a6e23c78d340172989418a0
@@ -846,7 +862,12 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
         value->value.l_int = num_pages;
       }
       break;
-    case RDC_FI_OAM_ID: {
+    case RDC_FI_OAM_ID:
+    case RDC_FI_DEV_ID:
+    case RDC_FI_REV_ID:
+    case RDC_FI_TARGET_GRAPHICS_VERSION:
+    case RDC_FI_NUM_OF_COMPUTE_UNITS:
+    case RDC_FI_UUID: {
       amdsmi_asic_info_t asic_info;
       value->status = amdsmi_get_gpu_asic_info(processor_handle, &asic_info);
       value->type = INTEGER;
@@ -857,6 +878,29 @@ rdc_status_t RdcMetricFetcherImpl::fetch_smi_field(uint32_t gpu_index, rdc_field
         } else {
           value->value.l_int = asic_info.oam_id;
         }
+      } else if (field_id == RDC_FI_DEV_ID) {
+        value->value.l_int = asic_info.device_id;
+      } else if (field_id == RDC_FI_REV_ID) {
+        value->value.l_int = asic_info.rev_id;
+      } else if (field_id == RDC_FI_TARGET_GRAPHICS_VERSION) {
+        if (asic_info.target_graphics_version == 0xFFFFFFFFFFFFFFFF) {
+          value->status = AMDSMI_STATUS_NOT_SUPPORTED;
+        } else {
+          value->value.l_int = asic_info.target_graphics_version;
+        }
+      } else if (field_id == RDC_FI_NUM_OF_COMPUTE_UNITS) {
+        if (asic_info.num_of_compute_units == 0xFFFFFFFF) {
+          value->status = AMDSMI_STATUS_NOT_SUPPORTED;
+        } else {
+          value->value.l_int = asic_info.num_of_compute_units;
+        }
+      } else if (field_id == RDC_FI_UUID) {
+        value->type = STRING;
+        memcpy(value->value.str, asic_info.asic_serial, sizeof(asic_info.asic_serial));
+      } else {
+        // this should never happen as all fields are handled above
+        RDC_LOG(RDC_ERROR, "Unexpected field id: " << field_id);
+        value->status = AMDSMI_STATUS_INPUT_OUT_OF_BOUNDS;
       }
       break;
     }
