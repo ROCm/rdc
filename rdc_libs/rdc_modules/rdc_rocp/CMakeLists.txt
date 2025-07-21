@@ -16,6 +16,7 @@ set(RDC_ROCP_LIB_INC_LIST
     "${RDC_LIB_INC_DIR}/RdcDiagnosticLibInterface.h"
     "${RDC_LIB_INC_DIR}/rdc_common.h"
     "${RDC_LIB_INC_DIR}/RdcLogger.h"
+    "${SRC_DIR}/../../rdc/src/SmiUtils.cc"
     "${INC_DIR}/RdcRocpBase.h"
     "${INC_DIR}/RdcRocpCounterSampler.h")
 
@@ -33,14 +34,13 @@ if(BUILD_PROFILER)
         CONFIGURE REQUIRED)
     set(RDC_LIB_MODULES ${RDC_LIB_MODULES} ${RDC_ROCP_LIB} PARENT_SCOPE)
     add_library(${RDC_ROCP_LIB} SHARED ${RDC_ROCP_LIB_SRC_LIST} ${RDC_ROCP_LIB_INC_LIST})
-    target_link_libraries(${RDC_ROCP_LIB} PRIVATE ${RDC_LIB} ${BOOTSTRAP_LIB} hsa-runtime64::hsa-runtime64 rocprofiler-sdk::rocprofiler-sdk pthread dl)
-    target_include_directories(${RDC_ROCP_LIB} PRIVATE
-        "${PROJECT_SOURCE_DIR}"
-        "${PROJECT_SOURCE_DIR}/include"
-        "${COMMON_DIR}"
-        "${AMD_SMI_INCLUDE_DIR}"
-        "${ROCM_DIR}/include"
-        "${ROCM_DIR}/include/hsa")
+    target_link_libraries(
+        ${RDC_ROCP_LIB} PRIVATE hsa-runtime64::hsa-runtime64 rocprofiler-sdk::rocprofiler-sdk
+                                pthread dl amd_smi)
+    target_include_directories(
+        ${RDC_ROCP_LIB}
+        PRIVATE "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/include" "${COMMON_DIR}"
+                "${AMD_SMI_INCLUDE_DIR}" "${ROCM_DIR}/include" "${ROCM_DIR}/include/hsa")
 
     # let bootstrap find this module at build time
     # at install-time the directory structure is a lot simpler
